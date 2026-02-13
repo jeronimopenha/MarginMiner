@@ -1,0 +1,30 @@
+b3lab/  (ou o nome que você escolher)
+  pyproject.toml
+  b3lab/
+    core/
+      models.py            # dataclasses/schemas
+      config.py            # paths, defaults
+      logging.py
+      utils_time.py
+    data/
+      universe.py          # carrega assets.csv, valida tickers
+      providers/
+        base.py            # interface IDataProvider
+        yahoo.py           # implementação yfinance
+      store/
+        duckdb_store.py    # persistência
+      pipelines/
+        update_market.py   # baixa preços/dividendos e salva
+        build_features.py  # gera features
+    screening/
+      rules.py             # filtros
+      rank.py              # ranking
+      run.py
+    valuation/
+      common.py            # tipos e helpers
+      dcf.py
+      multiples.py
+      dividend_model.py
+    cli/
+      main.py              # comandos: update, features, screen, value
+  assets.csv
