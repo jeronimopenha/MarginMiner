@@ -27,7 +27,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_10">
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_9" stretch="0,1,0">
+    <layout class="QVBoxLayout" name="verticalLayout_9" stretch="0,0,1">
      <property name="leftMargin">
       <number>1</number>
      </property>
@@ -38,7 +38,7 @@
       <number>1</number>
      </property>
      <item>
-      <layout class="QGridLayout" name="gridLayout" columnstretch="1,0,0,0">
+      <layout class="QGridLayout" name="gridLayout" columnstretch="1,1,1,1">
        <item row="0" column="2">
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
@@ -87,7 +87,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_4">
            <item>
-            <widget class="QLineEdit" name="txtCotMin_2">
+            <widget class="QLineEdit" name="txtDyMin">
              <property name="inputMask">
               <string>##.00%;_</string>
              </property>
@@ -97,7 +97,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="txtCotMax_2">
+            <widget class="QLineEdit" name="txtDyMax">
              <property name="inputMask">
               <string>##.00%;_</string>
              </property>
@@ -160,20 +160,20 @@
            <item>
             <widget class="QLineEdit" name="txtCotMin">
              <property name="inputMask">
-              <string>R###.00;_</string>
+              <string>R$###.00;_</string>
              </property>
              <property name="text">
-              <string>R.</string>
+              <string>R$.</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QLineEdit" name="txtCotMax">
              <property name="inputMask">
-              <string>R###.00;_</string>
+              <string>R$###.00;_</string>
              </property>
              <property name="text">
-              <string>R.</string>
+              <string>R$.</string>
              </property>
             </widget>
            </item>
@@ -229,7 +229,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_6">
            <item>
-            <widget class="QLineEdit" name="txtCotMin_3">
+            <widget class="QLineEdit" name="txtPvpMin">
              <property name="inputMask">
               <string>#.00;_</string>
              </property>
@@ -239,7 +239,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="txtCotMax_3">
+            <widget class="QLineEdit" name="txtPvpMax">
              <property name="inputMask">
               <string>#.00;_</string>
              </property>
@@ -373,20 +373,20 @@
            <item>
             <widget class="QLineEdit" name="txtValMin">
              <property name="inputMask">
-              <string>R###.00;_</string>
+              <string>R$###.00;_</string>
              </property>
              <property name="text">
-              <string>R.</string>
+              <string>R$.</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QLineEdit" name="txtValMax">
              <property name="inputMask">
-              <string>R###.00;_</string>
+              <string>R$###.00;_</string>
              </property>
              <property name="text">
-              <string>R.</string>
+              <string>R$.</string>
              </property>
             </widget>
            </item>
@@ -448,20 +448,20 @@
                <item>
                 <widget class="QLineEdit" name="txtLiqMin">
                  <property name="inputMask">
-                  <string>R###.00;_</string>
+                  <string>R$######.00;_</string>
                  </property>
                  <property name="text">
-                  <string>R.</string>
+                  <string>R$.</string>
                  </property>
                 </widget>
                </item>
                <item>
                 <widget class="QLineEdit" name="txtLiqMax">
                  <property name="inputMask">
-                  <string>R###.00;_</string>
+                  <string>R$######.00;_</string>
                  </property>
                  <property name="text">
-                  <string>R.</string>
+                  <string>R$.</string>
                  </property>
                 </widget>
                </item>
@@ -521,22 +521,60 @@
       </layout>
      </item>
      <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_17" stretch="1,0,0,0,0,0">
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item alignment="Qt::AlignmentFlag::AlignRight">
+        <widget class="QPushButton" name="btnAncTijolo">
+         <property name="text">
+          <string>Anc. Tijolo</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnCrescTijolo">
+         <property name="text">
+          <string>Cresc. Tijolo</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnAncPapel">
+         <property name="text">
+          <string>Anc. Papel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnCrescPapel">
+         <property name="text">
+          <string>Cresc. Papel</string>
+         </property>
+        </widget>
+       </item>
+       <item alignment="Qt::AlignmentFlag::AlignRight">
+        <widget class="QPushButton" name="btnClear">
+         <property name="text">
+          <string>Limpar</string>
+         </property>
+        </widget>
+       </item>
+       <item alignment="Qt::AlignmentFlag::AlignRight">
+        <widget class="QPushButton" name="btnUpdate">
+         <property name="text">
+          <string>Atualizar</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
       <widget class="QTableView" name="tableView">
        <property name="sortingEnabled">
         <bool>true</bool>
        </property>
       </widget>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_15">
-       <item alignment="Qt::AlignmentFlag::AlignRight">
-        <widget class="QPushButton" name="btnExecute">
-         <property name="text">
-          <string>Executar</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
      </item>
     </layout>
    </item>

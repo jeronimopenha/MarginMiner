@@ -5,6 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7e5ecd4a-4ab1-4af2-b5f0-484fb9d2f2b2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/csv/fii/.~lock.agencia_bancos.csv#" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/csv/fii/imoveis_industriais_logisticos.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/csv/fii/imoveis_industriais_logisticos.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/exec.py" beforeDir="false" afterPath="$PROJECT_DIR$/exec.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/ui/frmFiiScreen.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/frmFiiScreen.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/ui/frmFiiScreen.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/frmFiiScreen.ui" afterDir="false" />
