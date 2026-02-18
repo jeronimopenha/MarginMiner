@@ -44,7 +44,7 @@
          <item>
           <widget class="QLabel" name="label_7">
            <property name="frameShape">
-            <enum>QFrame::Shape::Box</enum>
+            <enum>QFrame::Shape::NoFrame</enum>
            </property>
            <property name="text">
             <string>DY</string>
@@ -59,7 +59,7 @@
            <item>
             <widget class="QLabel" name="label_8">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Min:</string>
@@ -72,7 +72,7 @@
            <item>
             <widget class="QLabel" name="label_9">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Máx:</string>
@@ -115,7 +115,7 @@
          <item>
           <widget class="QLabel" name="label_13">
            <property name="frameShape">
-            <enum>QFrame::Shape::Box</enum>
+            <enum>QFrame::Shape::NoFrame</enum>
            </property>
            <property name="text">
             <string>Cotação</string>
@@ -130,7 +130,7 @@
            <item>
             <widget class="QLabel" name="label_14">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Min:</string>
@@ -143,7 +143,7 @@
            <item>
             <widget class="QLabel" name="label_15">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Máx:</string>
@@ -186,7 +186,7 @@
          <item>
           <widget class="QLabel" name="label_10">
            <property name="frameShape">
-            <enum>QFrame::Shape::Box</enum>
+            <enum>QFrame::Shape::NoFrame</enum>
            </property>
            <property name="text">
             <string>P/VP</string>
@@ -201,7 +201,7 @@
            <item>
             <widget class="QLabel" name="label_11">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Min:</string>
@@ -214,7 +214,7 @@
            <item>
             <widget class="QLabel" name="label_12">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Máx:</string>
@@ -257,7 +257,7 @@
          <item>
           <widget class="QLabel" name="label_4">
            <property name="frameShape">
-            <enum>QFrame::Shape::Box</enum>
+            <enum>QFrame::Shape::NoFrame</enum>
            </property>
            <property name="text">
             <string>% em caixa</string>
@@ -272,7 +272,7 @@
            <item>
             <widget class="QLabel" name="label_5">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Min:</string>
@@ -285,7 +285,7 @@
            <item>
             <widget class="QLabel" name="label_6">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Máx:</string>
@@ -328,7 +328,7 @@
          <item>
           <widget class="QLabel" name="label_19">
            <property name="frameShape">
-            <enum>QFrame::Shape::Box</enum>
+            <enum>QFrame::Shape::NoFrame</enum>
            </property>
            <property name="text">
             <string>Valor de Mercado</string>
@@ -343,7 +343,7 @@
            <item>
             <widget class="QLabel" name="label_20">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Min:</string>
@@ -356,7 +356,7 @@
            <item>
             <widget class="QLabel" name="label_21">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Máx:</string>
@@ -403,7 +403,7 @@
              <item>
               <widget class="QLabel" name="label_16">
                <property name="frameShape">
-                <enum>QFrame::Shape::Box</enum>
+                <enum>QFrame::Shape::NoFrame</enum>
                </property>
                <property name="text">
                 <string>Liquidez Diária</string>
@@ -418,7 +418,7 @@
                <item>
                 <widget class="QLabel" name="label_17">
                  <property name="frameShape">
-                  <enum>QFrame::Shape::Box</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <property name="text">
                   <string>Min:</string>
@@ -431,7 +431,7 @@
                <item>
                 <widget class="QLabel" name="label_18">
                  <property name="frameShape">
-                  <enum>QFrame::Shape::Box</enum>
+                  <enum>QFrame::Shape::NoFrame</enum>
                  </property>
                  <property name="text">
                   <string>Máx:</string>
@@ -480,7 +480,7 @@
            <item>
             <widget class="QLabel" name="label_3">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Segmento:</string>
@@ -497,7 +497,7 @@
            <item>
             <widget class="QLabel" name="label_2">
              <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
              <property name="text">
               <string>Papel:</string>
@@ -521,7 +521,11 @@
       </layout>
      </item>
      <item>
-      <widget class="QTableView" name="tableView"/>
+      <widget class="QTableView" name="tableView">
+       <property name="sortingEnabled">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_15">
