@@ -6,8 +6,17 @@
   <component name="ChangeListManager">
     <list default="true" id="7e5ecd4a-4ab1-4af2-b5f0-484fb9d2f2b2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+<<<<<<< HEAD
       <change beforePath="$PROJECT_DIR$/src/ui/fii_view.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/fii_view.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/util.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/util.py" afterDir="false" />
+=======
+      <change beforePath="$PROJECT_DIR$/data/csv/fii/fof.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/csv/fii/fof.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/common/Parse.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/Parse.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ui/fii_view.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/fii_view.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ui/frmFiiScreen.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/frmFiiScreen.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ui/frmFiiScreen.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/frmFiiScreen.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ui/pandas_table_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/pandas_table_model.py" afterDir="false" />
+>>>>>>> origin/main
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,7 +45,11 @@
   "keyToString": {
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "Python.cli.executor": "Debug",
+<<<<<<< HEAD
     "Python.exec.executor": "Run",
+=======
+    "Python.exec.executor": "Debug",
+>>>>>>> origin/main
     "Python.fii_view.executor": "Run",
     "Python.frmFiiScreen (1).executor": "Run",
     "Python.frmFiiScreen.executor": "Run",
