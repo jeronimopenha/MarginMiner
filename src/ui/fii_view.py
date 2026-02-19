@@ -28,15 +28,18 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
             "DY",
             "VPC",
             "P/VP",
-            "LIQ. DIARIA",
-            "PERC. CAIXA",
+            "LIQ_DIARIA",
+            "PERC_CAIXA",
             "CAGR DIV. 3 A",
             "CAGR VAL 3 A",
             "PATRIMONIO",
             "N COTISTAS",
             "GESTAO",
             "N COTAS",
-            "SEG"
+            "SEG",
+            "RDY",
+            "RPVP",
+            "R"
         ]
 
         self.formats = {
@@ -46,8 +49,8 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
             "DY": "pct",
             "VPC": "brl",
             "P/VP": ("float", 2),
-            "LIQ. DIARIA": "brl",  # ou ("float", 0) se você quiser sem R$
-            "PERC. CAIXA": "pct",
+            "LIQ_DIARIA": "brl",  # ou ("float", 0) se você quiser sem R$
+            "PERC_CAIXA": "pct",
             "CAGR DIV. 3 A": "pct",
             "CAGR VAL 3 A": "pct",
             "PATRIMONIO": "brl",
@@ -55,15 +58,22 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
             "GESTAO": "text",
             "N COTAS": "int",
             "SEG": "text",
+            "RDY": "int",
+            "RPVP": "int",
+            "R": "int",
         }
         self.df_all = None
 
-        self.setupUi(self)  # MUITO IMPORTANTE
+        self.setupUi(self)
 
         self.read_data()
 
         self.model = PandasTableModel(self.df_all, headers=self.headers, formats=self.formats)
         self.tableView.setModel(self.model)
+        self.tableView.horizontalHeader().setSectionsMovable(True)
+        self.tableView.setColumnHidden(15, True)
+        self.tableView.setColumnHidden(16, True)
+        self.tableView.setColumnHidden(12, True)
 
         self.ancTijolo()
 
@@ -80,10 +90,22 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
         self.btnAncTijolo.clicked.connect(self.ancTijolo)
 
     def read_data(self):
-        rootPath = Util.get_project_root()
-        files = Util.get_files_list_by_extension(
-            rootPath + "/data/csv/fii/", ".csv"
-        )
+        data_dir = Util.get_data_dir()
+        files = Util.get_files_list_by_extension(str(data_dir), ".csv")
+
+        # rootPath = Util.get_project_root()
+        # files = Util.get_files_list_by_extension(
+        #    rootPath + "/data/csv/fii/", ".csv"
+        # )
+        if not files:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Sem CSVs",
+                f"Não encontrei arquivos .csv em:\n{data_dir}\n\n"
+                "Crie/coloque os CSVs nessa pasta e clique em Atualizar."
+            )
+            self.df_all = pd.DataFrame()  # ou um df com colunas esperadas
+            exit(0)
 
         dfs = []
 
@@ -101,8 +123,28 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
             df["SEGMENTO"] = segmento
 
             dfs.append(df)
+        df_all = pd.concat(dfs, ignore_index=True)
 
-        self.df_all = pd.concat(dfs, ignore_index=True)
+        df_all["DY"] = pd.to_numeric(df_all["DY"], errors="coerce")
+        df_all["P/VP"] = pd.to_numeric(df_all["P/VP"], errors="coerce")
+
+        df_all["RDY"] = df_all["DY"].rank(
+            ascending=False,
+            method="min",
+            na_option="bottom"
+        )
+
+        df_all["RPVP"] = df_all["P/VP"].rank(
+            ascending=True,
+            method="min",
+            na_option="bottom"
+        )
+
+        df_all["RPVP"] = df_all["RPVP"].round().astype("Int64")
+        df_all["RDY"] = df_all["RDY"].round().astype("Int64")
+        df_all["R"] = (df_all["RPVP"] + df_all["RDY"]).astype("Int64")
+
+        self.df_all = df_all
 
     def update_cmb_segmentos(self):
         self.cmbSegmento.clear()
@@ -146,7 +188,7 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
 
         pcx_min = Parse.percent(self.txtCaixaMin.text())
         pcx_max = Parse.percent(self.txtCaixaMax.text())
-        df = apply_min_max(df, "PERC. CAIXA", pcx_min, pcx_max)
+        df = apply_min_max(df, "PERC.CAIXA", pcx_min, pcx_max)
 
         cot_max = Parse.float(self.txtCotMax.text())
         cot_min = Parse.float(self.txtCotMin.text())
@@ -154,13 +196,23 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
 
         liq_max = Parse.float(self.txtLiqMax.text())
         liq_min = Parse.float(self.txtLiqMin.text())
-        df = apply_min_max(df, "LIQ. DIARIA", liq_min, liq_max)
+        df = apply_min_max(df, "LIQUIDEZ MEDIA DIARIA", liq_min, liq_max)
+
+        cot_min = Parse.percent(self.txtCotMin.text())
+        cot_max = Parse.percent(self.txtCotMax.text())
+        df = apply_min_max(df, "PRECO", cot_min, cot_max)
 
         tickers = sorted(df["TICKER"].unique())
 
         for t in tickers:
             self.cmbPapel.addItem(t, t)
+        # print("DF cols:", list(df.columns))
+        # print("HDRs  :", self.headers)
         self.model.set_df(df)
+        self.tableView.sortByColumn(
+            self.headers.index("R"),
+            QtCore.Qt.SortOrder.AscendingOrder
+        )
 
     def clear_input(self):
         for le in self.findChildren(QtWidgets.QLineEdit):
@@ -170,23 +222,28 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
     def ancPapel(self):
         self.txtPvpMax.setText("100")
         self.txtPvpMin.setText("090")
-        self.txtDyMin.setText("0008")
+        self.txtDyMin.setText("1200")
+        self.txtLiqMin.setText("0100000000")
         self.update_data()
 
     def ancTijolo(self):
         self.txtPvpMax.setText("105")
         self.txtPvpMin.setText("094")
-        self.txtDyMin.setText("0008")
+        self.txtDyMin.setText("0900")
+        self.txtLiqMin.setText("0100000000")
+
         self.update_data()
 
     def crescPapel(self):
         self.txtPvpMax.setText("100")
         self.txtPvpMin.setText("085")
-        self.txtDyMin.setText("0010")
+        self.txtDyMin.setText("1300")
+        self.txtLiqMin.setText("0080000000")
         self.update_data()
 
     def crescTijolo(self):
         self.txtPvpMax.setText("105")
         self.txtPvpMin.setText("080")
-        self.txtDyMin.setText("0010")
+        self.txtDyMin.setText("1000")
+        self.txtLiqMin.setText("0080000000")
         self.update_data()

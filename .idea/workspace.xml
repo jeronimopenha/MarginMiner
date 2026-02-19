@@ -6,11 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="7e5ecd4a-4ab1-4af2-b5f0-484fb9d2f2b2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/csv/fii/.~lock.agencia_bancos.csv#" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/csv/fii/imoveis_industriais_logisticos.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/csv/fii/imoveis_industriais_logisticos.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/exec.py" beforeDir="false" afterPath="$PROJECT_DIR$/exec.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ui/frmFiiScreen.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/frmFiiScreen.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ui/frmFiiScreen.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/frmFiiScreen.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ui/fii_view.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/fii_view.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/util.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/util.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,7 +37,8 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "Python.cli.executor": "Debug",
     "Python.exec.executor": "Run",
-    "Python.frmFiiScreen (1).executor": "Debug",
+    "Python.fii_view.executor": "Run",
+    "Python.frmFiiScreen (1).executor": "Run",
     "Python.frmFiiScreen.executor": "Run",
     "Python.janelateste.executor": "Debug",
     "RunOnceActivity.ShowReadmeOnStart": "true",
@@ -64,29 +62,6 @@
     </key>
   </component>
   <component name="RunManager" selected="Python.exec">
-    <configuration name="cli" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="MarginMiner" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/marginminer" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/marginminer/cli.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="exec" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="MarginMiner" />
       <option name="ENV_FILES" value="" />
@@ -101,6 +76,28 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/exec.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="fii_view" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="MarginMiner" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/ui" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/ui/fii_view.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -178,10 +175,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.exec" />
+        <item itemvalue="Python.fii_view" />
         <item itemvalue="Python.frmFiiScreen (1)" />
         <item itemvalue="Python.frmFiiScreen" />
         <item itemvalue="Python.janelateste" />
-        <item itemvalue="Python.cli" />
       </list>
     </recent_temporary>
   </component>

@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from typing import List, Tuple
 
@@ -34,3 +35,18 @@ class Util:
         """
         path: Path = Path(__file__).parent.parent
         return str(path)
+
+    @staticmethod
+    def get_data_dir():
+        app_dir = Util.get_app_dir()
+        data_dir = app_dir / "data/csv/fii"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        return data_dir
+
+    def get_app_dir():
+        if getattr(sys, "frozen", False):
+            # executável empacotado (AppImage)
+            return Path(sys.executable).resolve().parent
+        else:
+            # modo dev
+            return Path(__file__).resolve().parents[2]

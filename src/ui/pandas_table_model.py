@@ -13,6 +13,15 @@ class PandasTableModel(QtCore.QAbstractTableModel):
     def rowCount(self, parent=QtCore.QModelIndex()):
         return len(self._df)
 
+    def sort(self, column, order):
+        colname = self._df.columns[column]
+
+        ascending = order == QtCore.Qt.SortOrder.AscendingOrder
+
+        self.layoutAboutToBeChanged.emit()
+        self._df = self._df.sort_values(colname, ascending=ascending, kind="mergesort")
+        self.layoutChanged.emit()
+
     def columnCount(self, parent=QtCore.QModelIndex()):
         return len(self._df.columns)
 
