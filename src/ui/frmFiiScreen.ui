@@ -118,7 +118,7 @@
             <enum>QFrame::Shape::NoFrame</enum>
            </property>
            <property name="text">
-            <string>Cotação</string>
+            <string>Preço</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -372,6 +372,9 @@
           <layout class="QHBoxLayout" name="horizontalLayout_12">
            <item>
             <widget class="QLineEdit" name="txtValMin">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="inputMask">
               <string>R$###.00;_</string>
              </property>
@@ -382,6 +385,9 @@
            </item>
            <item>
             <widget class="QLineEdit" name="txtValMax">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="inputMask">
               <string>R$###.00;_</string>
              </property>
@@ -448,20 +454,20 @@
                <item>
                 <widget class="QLineEdit" name="txtLiqMin">
                  <property name="inputMask">
-                  <string>R$######.00;_</string>
+                  <string>R$##,###,###.00;_</string>
                  </property>
                  <property name="text">
-                  <string>R$.</string>
+                  <string>R$,,.</string>
                  </property>
                 </widget>
                </item>
                <item>
                 <widget class="QLineEdit" name="txtLiqMax">
                  <property name="inputMask">
-                  <string>R$######.00;_</string>
+                  <string>R$##,###,###.00;_</string>
                  </property>
                  <property name="text">
-                  <string>R$.</string>
+                  <string>R$,,.</string>
                  </property>
                 </widget>
                </item>

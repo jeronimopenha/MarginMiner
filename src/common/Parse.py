@@ -6,11 +6,9 @@ class Parse:
         if not txt:
             return None
 
-        # remove R$
         txt = txt.replace("R$", "").strip()
 
-        # suporta vírgula brasileira
-        txt = txt.replace(",", ".")
+        txt = txt.replace(",", "")
 
         try:
             return float(txt)
@@ -24,11 +22,9 @@ class Parse:
         if not txt:
             return None
 
-        # remove %
         txt = txt.replace("%", "").strip()
 
-        # suporta vírgula brasileira
-        txt = txt.replace(",", ".")
+        txt = txt.replace(",", "")
 
         try:
             return float(txt)
