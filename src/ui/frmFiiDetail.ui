@@ -1,0 +1,1002 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DlgFiiDetails</class>
+ <widget class="QDialog" name="DlgFiiDetails">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1180</width>
+    <height>760</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Detalhes do FII</string>
+  </property>
+  <property name="modal">
+   <bool>false</bool>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayoutRoot">
+   <property name="leftMargin">
+    <number>8</number>
+   </property>
+   <property name="topMargin">
+    <number>8</number>
+   </property>
+   <property name="rightMargin">
+    <number>8</number>
+   </property>
+   <property name="bottomMargin">
+    <number>8</number>
+   </property>
+
+   <item>
+    <widget class="QFrame" name="frmHeader">
+     <property name="frameShape">
+      <enum>QFrame::Shape::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Shadow::Raised</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayoutHeader">
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayoutHeaderLeft">
+        <item>
+         <widget class="QLabel" name="lblTicker">
+          <property name="text">
+           <string>KNRI11</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">font-size: 24px; font-weight: bold;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblNome">
+          <property name="text">
+           <string>Kinea Renda Imobiliária</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">font-size: 14px;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayoutHeaderMeta">
+          <item>
+           <widget class="QLabel" name="lblSegmentoTitulo">
+            <property name="text">
+             <string>Segmento:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblSegmento">
+            <property name="text">
+             <string>Tijolo</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacerHeader1">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblDataRefTitulo">
+            <property name="text">
+             <string>Data-base:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblDataRef">
+            <property name="text">
+             <string>--/--/----</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+
+      <item>
+       <spacer name="horizontalSpacerHeader2">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayoutHeaderRight">
+        <item>
+         <widget class="QLabel" name="lblPrecoTitulo">
+          <property name="text">
+           <string>Preço Atual</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblPrecoAtual">
+          <property name="text">
+           <string>R$ 0,00</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">font-size: 22px; font-weight: bold;</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblPrecoObs">
+          <property name="text">
+           <string>Total return considera proventos reinvestidos</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <item>
+    <layout class="QGridLayout" name="gridLayoutResumo">
+     <property name="horizontalSpacing">
+      <number>8</number>
+     </property>
+     <property name="verticalSpacing">
+      <number>8</number>
+     </property>
+
+     <item row="0" column="0">
+      <widget class="QGroupBox" name="grpResumo1">
+       <property name="title">
+        <string>Valuation</string>
+       </property>
+       <layout class="QFormLayout" name="formLayoutResumo1">
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelPvpTitulo">
+          <property name="text">
+           <string>P/VP:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="lblPvp">
+          <property name="text">
+           <string>0,00</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="labelVpaTitulo">
+          <property name="text">
+           <string>VP/Cota:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="lblVpa">
+          <property name="text">
+           <string>R$ 0,00</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="labelDy12Titulo">
+          <property name="text">
+           <string>DY 12m:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="lblDy12">
+          <property name="text">
+           <string>0,00%</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+
+     <item row="0" column="1">
+      <widget class="QGroupBox" name="grpResumo2">
+       <property name="title">
+        <string>Risco</string>
+       </property>
+       <layout class="QFormLayout" name="formLayoutResumo2">
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelVol12Titulo">
+          <property name="text">
+           <string>Vol. 12m:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="lblVol12">
+          <property name="text">
+           <string>0,00%</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="labelBetaTitulo">
+          <property name="text">
+           <string>Beta:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="lblBeta">
+          <property name="text">
+           <string>0,00</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="labelSharpeTitulo">
+          <property name="text">
+           <string>Sharpe:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="lblSharpe12">
+          <property name="text">
+           <string>0,00</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+
+     <item row="0" column="2">
+      <widget class="QGroupBox" name="grpResumo3">
+       <property name="title">
+        <string>Retorno</string>
+       </property>
+       <layout class="QFormLayout" name="formLayoutResumo3">
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelRet12Titulo">
+          <property name="text">
+           <string>Total Return 12m:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="lblRet12">
+          <property name="text">
+           <string>0,00%</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="labelCagr5Titulo">
+          <property name="text">
+           <string>CAGR 5a:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="lblCagr5">
+          <property name="text">
+           <string>0,00%</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="labelMaxDdTitulo">
+          <property name="text">
+           <string>Max Drawdown:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="lblMaxDrawdown">
+          <property name="text">
+           <string>0,00%</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+
+     <item row="0" column="3">
+      <widget class="QGroupBox" name="grpResumo4">
+       <property name="title">
+        <string>CAPM</string>
+       </property>
+       <layout class="QFormLayout" name="formLayoutResumo4">
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelCapmTitulo">
+          <property name="text">
+           <string>CAPM:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="lblCapm">
+          <property name="text">
+           <string>0,00%</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="labelAlphaTitulo">
+          <property name="text">
+           <string>Alpha:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="lblAlpha">
+          <property name="text">
+           <string>0,00%</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="labelTreynorTitulo">
+          <property name="text">
+           <string>Treynor:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="lblTreynor">
+          <property name="text">
+           <string>0,00</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+
+     <widget class="QWidget" name="tabGeral">
+      <attribute name="title">
+       <string>Geral</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutTabGeral">
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayoutTopTabGeral">
+         <item>
+          <widget class="QGroupBox" name="grpInfoFii">
+           <property name="title">
+            <string>Informações do FII</string>
+           </property>
+           <layout class="QFormLayout" name="formLayoutInfoFii">
+            <item row="0" column="0">
+             <widget class="QLabel" name="labelGestaoTitulo">
+              <property name="text">
+               <string>Gestão:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="lblGestao">
+              <property name="text">
+               <string>--</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="labelPatrimonioTitulo">
+              <property name="text">
+               <string>Patrimônio:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="lblPatrimonio">
+              <property name="text">
+               <string>R$ 0,00</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="labelCotistasTitulo">
+              <property name="text">
+               <string>Nº cotistas:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLabel" name="lblCotistas">
+              <property name="text">
+               <string>0</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="labelNumCotasTitulo">
+              <property name="text">
+               <string>Nº cotas:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLabel" name="lblNumCotas">
+              <property name="text">
+               <string>0</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="labelCaixaTitulo">
+              <property name="text">
+               <string>% em caixa:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLabel" name="lblPercCaixa">
+              <property name="text">
+               <string>0,00%</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="labelLiqTitulo">
+              <property name="text">
+               <string>Liq. diária:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QLabel" name="lblLiqDiaria">
+              <property name="text">
+               <string>R$ 0,00</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+
+         <item>
+          <widget class="QGroupBox" name="grpIndicadoresExtras">
+           <property name="title">
+            <string>Indicadores Extras</string>
+           </property>
+           <layout class="QFormLayout" name="formLayoutIndicadoresExtras">
+            <item row="0" column="0">
+             <widget class="QLabel" name="labelSortinoTitulo">
+              <property name="text">
+               <string>Sortino:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="lblSortino">
+              <property name="text">
+               <string>0,00</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="labelCalmarTitulo">
+              <property name="text">
+               <string>Calmar:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="lblCalmar">
+              <property name="text">
+               <string>0,00</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="labelInfoTitulo">
+              <property name="text">
+               <string>Information Ratio:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLabel" name="lblInformationRatio">
+              <property name="text">
+               <string>0,00</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="labelTrackingErrorTitulo">
+              <property name="text">
+               <string>Tracking Error:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLabel" name="lblTrackingError">
+              <property name="text">
+               <string>0,00%</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="labelJensenTitulo">
+              <property name="text">
+               <string>Jensen Alpha:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLabel" name="lblJensenAlpha">
+              <property name="text">
+               <string>0,00%</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </item>
+
+       <item>
+        <widget class="QGroupBox" name="grpObservacoes">
+         <property name="title">
+          <string>Observações</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayoutObservacoes">
+          <item>
+           <widget class="QPlainTextEdit" name="txtObservacoes">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>Resumo automático, pontos fortes, pontos fracos, observações do ativo...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <widget class="QWidget" name="tabRetornoRisco">
+      <attribute name="title">
+       <string>Retorno e Risco</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutTabRetornoRisco">
+       <item>
+        <widget class="QTableWidget" name="tblRetornoRisco">
+         <property name="columnCount">
+          <number>6</number>
+         </property>
+         <property name="rowCount">
+          <number>9</number>
+         </property>
+         <attribute name="horizontalHeaderDefaultSectionSize">
+          <number>130</number>
+         </attribute>
+         <row>
+          <property name="text">
+           <string>Retorno total</string>
+          </property>
+         </row>
+         <row>
+          <property name="text">
+           <string>CAGR</string>
+          </property>
+         </row>
+         <row>
+          <property name="text">
+           <string>Volatilidade</string>
+          </property>
+         </row>
+         <row>
+          <property name="text">
+           <string>Sharpe</string>
+          </property>
+         </row>
+         <row>
+          <property name="text">
+           <string>Sortino</string>
+          </property>
+         </row>
+         <row>
+          <property name="text">
+           <string>Max Drawdown</string>
+          </property>
+         </row>
+         <row>
+          <property name="text">
+           <string>Calmar</string>
+          </property>
+         </row>
+         <row>
+          <property name="text">
+           <string>Beta</string>
+          </property>
+         </row>
+         <row>
+          <property name="text">
+           <string>Alpha</string>
+          </property>
+         </row>
+
+         <column>
+          <property name="text">
+           <string>Métrica</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>12m</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>3 anos</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>5 anos</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>10 anos</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Desde o início</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <widget class="QWidget" name="tabCapm">
+      <attribute name="title">
+       <string>CAPM e Benchmark</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutTabCapm">
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayoutBenchmark">
+         <item>
+          <widget class="QLabel" name="labelBenchmarkTitulo">
+           <property name="text">
+            <string>Benchmark:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cmbBenchmark">
+           <item>
+            <property name="text">
+             <string>IFIX</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>IBOV</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>CDI</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacerBenchmark">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayoutCapmTables">
+         <item>
+          <widget class="QGroupBox" name="grpCapmValores">
+           <property name="title">
+            <string>Valores Atuais</string>
+           </property>
+           <layout class="QFormLayout" name="formLayoutCapmValores">
+            <item row="0" column="0">
+             <widget class="QLabel" name="labelRfTitulo">
+              <property name="text">
+               <string>Taxa livre de risco:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="lblRiskFree">
+              <property name="text">
+               <string>0,00%</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="labelPremioTitulo">
+              <property name="text">
+               <string>Prêmio de mercado:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="lblPremioMercado">
+              <property name="text">
+               <string>0,00%</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="labelBetaCapmTitulo">
+              <property name="text">
+               <string>Beta:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLabel" name="lblBetaCapm">
+              <property name="text">
+               <string>0,00</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="labelCapmCalcTitulo">
+              <property name="text">
+               <string>CAPM calculado:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLabel" name="lblCapmCalc">
+              <property name="text">
+               <string>0,00%</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="labelRetRealizadoTitulo">
+              <property name="text">
+               <string>Retorno realizado:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLabel" name="lblRetornoRealizado">
+              <property name="text">
+               <string>0,00%</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+
+         <item>
+          <widget class="QGroupBox" name="grpCapmMetricas">
+           <property name="title">
+            <string>Métricas Derivadas</string>
+           </property>
+           <layout class="QFormLayout" name="formLayoutCapmMetricas">
+            <item row="0" column="0">
+             <widget class="QLabel" name="labelAlphaCapmTitulo">
+              <property name="text">
+               <string>Alpha:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="lblAlphaCapm">
+              <property name="text">
+               <string>0,00%</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="labelTreynorCapmTitulo">
+              <property name="text">
+               <string>Treynor:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="lblTreynorCapm">
+              <property name="text">
+               <string>0,00</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="labelInfoRatioCapmTitulo">
+              <property name="text">
+               <string>Information Ratio:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLabel" name="lblInfoRatioCapm">
+              <property name="text">
+               <string>0,00</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="labelTrackingCapmTitulo">
+              <property name="text">
+               <string>Tracking Error:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLabel" name="lblTrackingCapm">
+              <property name="text">
+               <string>0,00%</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="labelJensenCapmTitulo">
+              <property name="text">
+               <string>Jensen Alpha:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLabel" name="lblJensenCapm">
+              <property name="text">
+               <string>0,00%</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+
+     <widget class="QWidget" name="tabDividendos">
+      <attribute name="title">
+       <string>Dividendos e Preços</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutTabDividendos">
+       <item>
+        <widget class="QGroupBox" name="grpProventos">
+         <property name="title">
+          <string>Histórico de Proventos</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayoutProventos">
+          <item>
+           <widget class="QTableView" name="tableDividendos"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="grpPrecos">
+         <property name="title">
+          <string>Histórico de Preços / Total Return</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayoutPrecos">
+          <item>
+           <widget class="QTableView" name="tablePrecos"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <widget class="QWidget" name="tabNotas">
+      <attribute name="title">
+       <string>Notas</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutTabNotas">
+       <item>
+        <widget class="QPlainTextEdit" name="txtNotasManuais">
+         <property name="placeholderText">
+          <string>Notas manuais sobre o ativo, riscos, tese, qualidade da gestão, emissões, vacância, prazo dos CRIs, indexadores, etc.</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+    </widget>
+   </item>
+
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayoutBottom">
+     <item>
+      <widget class="QPushButton" name="btnAtualizarDados">
+       <property name="text">
+        <string>Atualizar dados</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnRecalcularMetricas">
+       <property name="text">
+        <string>Recalcular métricas</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacerBottom">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnFechar">
+       <property name="text">
+        <string>Fechar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

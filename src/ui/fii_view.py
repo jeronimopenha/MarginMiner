@@ -4,6 +4,7 @@ from PyQt6 import QtCore, QtWidgets
 
 from src.common.Parse import Parse
 from src.ui.frmFiiScreen import Ui_Frame
+from src.ui.fii_detail_view import FiiDetailView
 from src.ui.pandas_table_model import PandasTableModel
 from src.util import Util
 
@@ -86,6 +87,8 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
         self.tableView.setColumnHidden(16, True)
 
         self.tableView.setAlternatingRowColors(True)
+
+        self.tableView.doubleClicked.connect(self.open_detail_from_index)
 
         self.ancTijolo()
 
@@ -335,3 +338,22 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
         self.txtDyMin.setText("1000")
         self.txtLiqMin.setText("0080000000")
         self.update_data()
+
+    def open_detail_from_index(self, index):
+        if not index.isValid():
+            return
+
+        row = index.row()
+        df = self.model._df  # assumindo que seu PandasTableModel guarda o DataFrame atual em _df
+
+        if df is None or df.empty:
+            return
+
+        if row < 0 or row >= len(df):
+            return
+
+        row_data = df.iloc[row].to_dict()
+
+        # manter referência para não fechar instantaneamente
+        self.detail_window = FiiDetailView(row_data, self)
+        self.detail_window.show()
