@@ -344,16 +344,23 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
             return
 
         row = index.row()
-        df = self.model._df  # assumindo que seu PandasTableModel guarda o DataFrame atual em _df
+        col_ticker = self.headers.index("TICKER")
 
+        ticker_index = self.model.index(row, col_ticker)
+        ticker = self.model.data(ticker_index)
+
+        if ticker is None:
+            return
+
+        df = self.model._df
         if df is None or df.empty:
             return
 
-        if row < 0 or row >= len(df):
+        selected = df[df["TICKER"].astype(str) == str(ticker)]
+        if selected.empty:
             return
 
-        row_data = df.iloc[row].to_dict()
+        row_data = selected.iloc[0].to_dict()
 
-        # manter referência para não fechar instantaneamente
         self.detail_window = FiiDetailView(row_data, self)
         self.detail_window.show()
