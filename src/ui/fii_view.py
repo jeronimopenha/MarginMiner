@@ -112,7 +112,7 @@ class FiiView(QtWidgets.QFrame, Ui_Frame):
         self.update_data()
 
     def read_data(self):
-        data_dir = Util.get_data_dir()
+        data_dir = Util.get_data_dir("fii/csv/")
         files = Util.get_files_list_by_extension(str(data_dir), ".csv")
 
         if not files:

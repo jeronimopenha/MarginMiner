@@ -31,16 +31,17 @@ class SelicDownloader:
 
     @classmethod
     def download(
-        cls,
-        start_date: date,
-        end_date: date,
-        timeout: int = 30,
+            cls,
+            start_date: date,
+            end_date: date,
+            timeout: int = 30,
     ) -> pd.DataFrame:
         url = cls.build_url(start_date, end_date)
         resp = requests.get(url, timeout=timeout)
         resp.raise_for_status()
 
         data = resp.json()
+        # print(data)
         if not data:
             return pd.DataFrame(columns=["Date", "selic_annual"])
 
@@ -53,10 +54,10 @@ class SelicDownloader:
 
         # Converte para decimal: 11.25 -> 0.1125
         df["selic_annual"] = (
-            pd.to_numeric(
-                df["valor"].astype(str).str.replace(",", ".", regex=False),
-                errors="coerce",
-            ) / 100.0
+                pd.to_numeric(
+                    df["valor"].astype(str).str.replace(",", ".", regex=False),
+                    errors="coerce",
+                ) / 100.0
         )
 
         df = df[["Date", "selic_annual"]].dropna().sort_values("Date").reset_index(drop=True)

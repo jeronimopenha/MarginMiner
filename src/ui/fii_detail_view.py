@@ -1,60 +1,13 @@
 from PyQt6 import QtWidgets
 import pandas as pd
 
+from src.data.market_cache import MarketCache
+from src.data.market_downloader import MarketDownloader
+from src.data.selic_cache import SelicCache
 from src.ui.frmFiiDetail import Ui_DlgFiiDetails
-from src.data.fii_downloader import FiiDownloader
+from src.data.asset_downloader import FiiDownloader
 from src.metrics.fii_metrics import FiiMetrics
 from src.ui.simple_pandas_model import SimplePandasModel
-
-
-def _is_null(value) -> bool:
-    try:
-        import pandas as pd
-        return pd.isna(value)
-    except Exception:
-        return value is None
-
-
-def _safe_str(value, default="--"):
-    if _is_null(value):
-        return default
-    text = str(value).strip()
-    return text if text else default
-
-
-def _fmt_float(value, decimals=2, default="--"):
-    if _is_null(value):
-        return default
-    try:
-        v = float(value)
-        txt = f"{v:,.{decimals}f}"
-        return txt.replace(",", "X").replace(".", ",").replace("X", ".")
-    except Exception:
-        return default
-
-
-def _fmt_brl(value, decimals=2, default="--"):
-    txt = _fmt_float(value, decimals=decimals, default=None)
-    if txt is None:
-        return default
-    return f"R$ {txt}"
-
-
-def _fmt_pct(value, decimals=2, default="--"):
-    if _is_null(value):
-        return default
-    try:
-        v = float(value)
-        return f"{_fmt_float(v, decimals)}%"
-    except Exception:
-        return default
-
-
-def _first_not_null(data: dict, *keys, default=None):
-    for key in keys:
-        if key in data and not _is_null(data[key]):
-            return data[key]
-    return default
 
 
 class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
@@ -73,10 +26,15 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
 
         self.btnFechar.clicked.connect(self.close)
 
-        #self.selic_df = self.load_selic_cache()
+        self.selic_cache = SelicCache()
+        self.selic_df = self.selic_cache.load_indexed()
+
+        self.market_downloader = MarketDownloader()
+        self.xfix_df = self.market_downloader.update_history("XFIX11")
 
         self.fill_basic_data()
         self.init_empty_tables()
+        self.update_market_data()
 
     def fill_basic_data(self):
         d = self.fii_data
@@ -168,8 +126,6 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
             "3 anos",
             "5 anos",
             "10 anos",
-            "Desde o início",
-            ""
         ])
 
         for r in range(self.tblRetornoRisco.rowCount()):
@@ -215,6 +171,7 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
             return
 
         tr = FiiMetrics.prepare_total_return_df(df)
+        self.xfix_df = FiiMetrics.prepare_total_return_df(self.xfix_df)
         if tr.empty:
             return
 
@@ -230,8 +187,14 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
             ("3 anos", FiiMetrics.window_slice(tr, years=3)),
             ("5 anos", FiiMetrics.window_slice(tr, years=5)),
             ("10 anos", FiiMetrics.window_slice(tr, years=10)),
-            ("Desde o início", tr.copy()),
         ]
+
+        win_market = {
+            "12m": FiiMetrics.window_slice(self.xfix_df, months=12),
+            "3 anos": FiiMetrics.window_slice(self.xfix_df, years=3),
+            "5 anos": FiiMetrics.window_slice(self.xfix_df, years=5),
+            "10 anos": FiiMetrics.window_slice(self.xfix_df, years=10),
+        }
 
         row_map = {
             "Retorno total": 0,
@@ -243,26 +206,31 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
             "Calmar": 6,
             "Beta": 7,
             "Alpha": 8,
-            "SELIC média": 9,
+            "SELIC": 9,
         }
 
-        for col_idx, (_, wdf) in enumerate(windows):
+        for col_idx, (key, wdf) in enumerate(windows):
             total_ret = FiiMetrics.total_return(wdf)
             cagr = FiiMetrics.cagr(wdf)
             vol = FiiMetrics.volatility_annualized(wdf)
-            rf_annual = FiiMetrics.avg_selic_for_window(wdf)
+            rf_annual = FiiMetrics.average_rf_annual_for_window(wdf, self.selic_df)
             sharpe = FiiMetrics.sharpe(wdf, rf_annual=rf_annual)
             mdd = FiiMetrics.max_drawdown(wdf)
+            calmar = FiiMetrics.calmar(cagr, mdd)
+            sortino = FiiMetrics.sortino(wdf, rf_annual=rf_annual)
+            beta = FiiMetrics.beta(wdf, win_market[key])
+            alpha = FiiMetrics.alpha(wdf, win_market[key], rf_annual)
 
             self._set_metric_item(row_map["Retorno total"], col_idx, self._fmt_metric_pct(total_ret))
             self._set_metric_item(row_map["CAGR"], col_idx, self._fmt_metric_pct(cagr))
             self._set_metric_item(row_map["Volatilidade"], col_idx, self._fmt_metric_pct(vol))
             self._set_metric_item(row_map["Sharpe"], col_idx, self._fmt_metric_num(sharpe))
-            self._set_metric_item(row_map["Sortino"], col_idx, "--")
+            self._set_metric_item(row_map["Sortino"], col_idx, self._fmt_metric_num(sortino))
             self._set_metric_item(row_map["Max Drawdown"], col_idx, self._fmt_metric_pct(mdd))
-            self._set_metric_item(row_map["Calmar"], col_idx, "--")
-            self._set_metric_item(row_map["Beta"], col_idx, "--")
-            self._set_metric_item(row_map["Alpha"], col_idx, "--")
+            self._set_metric_item(row_map["Calmar"], col_idx, self._fmt_metric_num(calmar))
+            self._set_metric_item(row_map["Beta"], col_idx, self._fmt_metric_num(beta))
+            self._set_metric_item(row_map["Alpha"], col_idx, self._fmt_metric_num(alpha))
+            self._set_metric_item(row_map["SELIC"], col_idx, self._fmt_metric_pct(rf_annual))
 
         # cards principais
         df12 = windows[0][1]
@@ -303,27 +271,6 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
         self.tablePrecos.setModel(price_model)
         self._price_model = price_model
 
-    def load_selic_cache(self) -> pd.DataFrame:
-        path = Path(self.base_path) / "data" / "cache" / "macro" / "selic.parquet"
-
-        if not path.exists():
-            return pd.DataFrame()
-
-        try:
-            df = pd.read_parquet(path)
-            df["Date"] = pd.to_datetime(df["Date"])
-            df = df.set_index("Date").sort_index()
-
-            df["selic_annual"] = pd.to_numeric(df["selic_annual"], errors="coerce")
-            df = df.dropna(subset=["selic_annual"])
-
-            # se estiver em percentual, descomente:
-            # df["selic_annual"] = df["selic_annual"] / 100.0
-
-            return df
-        except Exception:
-            return pd.DataFrame()
-
     def _set_metric_item(self, row, col, text):
         item = QtWidgets.QTableWidgetItem(text)
         self.tblRetornoRisco.setItem(row, col, item)
@@ -337,3 +284,53 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
         if value is None:
             return "--"
         return _fmt_float(value, decimals=2)
+
+
+def _is_null(value) -> bool:
+    try:
+        import pandas as pd
+        return pd.isna(value)
+    except Exception:
+        return value is None
+
+
+def _safe_str(value, default="--"):
+    if _is_null(value):
+        return default
+    text = str(value).strip()
+    return text if text else default
+
+
+def _fmt_float(value, decimals=2, default="--"):
+    if _is_null(value):
+        return default
+    try:
+        v = float(value)
+        txt = f"{v:,.{decimals}f}"
+        return txt.replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception:
+        return default
+
+
+def _fmt_brl(value, decimals=2, default="--"):
+    txt = _fmt_float(value, decimals=decimals, default=None)
+    if txt is None:
+        return default
+    return f"R$ {txt}"
+
+
+def _fmt_pct(value, decimals=2, default="--"):
+    if _is_null(value):
+        return default
+    try:
+        v = float(value)
+        return f"{_fmt_float(v, decimals)}%"
+    except Exception:
+        return default
+
+
+def _first_not_null(data: dict, *keys, default=None):
+    for key in keys:
+        if key in data and not _is_null(data[key]):
+            return data[key]
+    return default

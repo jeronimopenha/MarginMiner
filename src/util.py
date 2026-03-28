@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import date
 from pathlib import Path
 from typing import List, Tuple
 
@@ -37,9 +38,9 @@ class Util:
         return str(path)
 
     @staticmethod
-    def get_data_dir():
+    def get_data_dir(sub_folder: str = ""):
         app_dir = Util.get_app_dir()
-        data_dir = app_dir / "data/csv/fii"
+        data_dir = app_dir / ("data/" + sub_folder)
         data_dir.mkdir(parents=True, exist_ok=True)
         return data_dir
 
@@ -50,3 +51,15 @@ class Util:
         else:
             # modo dev
             return Path(__file__).resolve().parents[2]
+
+    def years_ago(today: date | None = None) -> date:
+        DEFAULT_LOOKBACK_YEARS = 10
+
+        if today is None:
+            today = date.today()
+
+        try:
+            return today.replace(year=today.year - DEFAULT_LOOKBACK_YEARS)
+        except ValueError:
+            # caso raro: 29/02
+            return today.replace(month=2, day=28, year=today.year - DEFAULT_LOOKBACK_YEARS)

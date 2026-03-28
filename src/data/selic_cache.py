@@ -6,15 +6,15 @@ from pathlib import Path
 import pandas as pd
 
 from src.data.selic_downloader import SelicDownloader
+from src.util import Util
 
 
 @dataclass
 class SelicCache:
-    base_dir: Path
 
     @property
     def cache_dir(self) -> Path:
-        return self.base_dir / "data" / "cache" / "macro"
+        return Util.get_data_dir("cache/macro")
 
     @property
     def parquet_path(self) -> Path:
@@ -66,12 +66,15 @@ class SelicCache:
         out.to_parquet(self.parquet_path, index=False)
 
     def update(
-        self,
-        start_date: date = date(2000, 1, 1),
-        end_date: date | None = None,
+            self,
+            start_date: date | None = None,
+            end_date: date | None = None,
     ) -> pd.DataFrame:
         if end_date is None:
             end_date = date.today()
+
+        if start_date is None:
+            start_date = Util.years_ago(end_date)
 
         old_df = self.load()
         new_df = SelicDownloader.download(start_date=start_date, end_date=end_date)
@@ -92,12 +95,22 @@ class SelicCache:
                 .reset_index(drop=True)
             )
 
+        cutoff = pd.Timestamp(start_date)
+        merged = merged[merged["Date"] >= cutoff].reset_index(drop=True)
+
         self.save(merged)
         return merged
 
     def load_indexed(self) -> pd.DataFrame:
         df = self.load()
         if df.empty:
-            return pd.DataFrame(columns=["selic_annual"])
+            try:
+                # return pd.DataFrame(columns=["selic_annual"])
+                df = self.update()
+                return df.set_index("Date").sort_index()
+            except Exception as e:
+                print(f"Erro ao atualizar SELIC: {e}")
+                exit(1)
+            # return pd.DataFrame(columns=["selic_annual"])
 
         return df.set_index("Date").sort_index()
