@@ -29,7 +29,6 @@
    <property name="bottomMargin">
     <number>8</number>
    </property>
-
    <item>
     <widget class="QFrame" name="frmHeader">
      <property name="frameShape">
@@ -43,21 +42,21 @@
        <layout class="QVBoxLayout" name="verticalLayoutHeaderLeft">
         <item>
          <widget class="QLabel" name="lblTicker">
-          <property name="text">
-           <string>KNRI11</string>
-          </property>
           <property name="styleSheet">
            <string notr="true">font-size: 24px; font-weight: bold;</string>
+          </property>
+          <property name="text">
+           <string>KNRI11</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QLabel" name="lblNome">
-          <property name="text">
-           <string>Kinea Renda Imobiliária</string>
-          </property>
           <property name="styleSheet">
            <string notr="true">font-size: 14px;</string>
+          </property>
+          <property name="text">
+           <string>Kinea Renda Imobiliária</string>
           </property>
          </widget>
         </item>
@@ -108,9 +107,8 @@
         </item>
        </layout>
       </item>
-
       <item>
-       <spacer name="horizontalSpacerHeader2">
+       <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
         </property>
@@ -122,7 +120,54 @@
         </property>
        </spacer>
       </item>
-
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Selic Utilizada (pode ser alterada):</string>
+          </property>
+         </widget>
+        </item>
+        <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
+         <widget class="QLineEdit" name="txtSelic">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>90</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>90</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="inputMask">
+           <string>##.00%;_</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
       <item>
        <layout class="QVBoxLayout" name="verticalLayoutHeaderRight">
         <item>
@@ -131,20 +176,20 @@
            <string>Preço Atual</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QLabel" name="lblPrecoAtual">
-          <property name="text">
-           <string>R$ 0,00</string>
-          </property>
           <property name="styleSheet">
            <string notr="true">font-size: 22px; font-weight: bold;</string>
           </property>
+          <property name="text">
+           <string>R$ 0,00</string>
+          </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
          </widget>
         </item>
@@ -154,7 +199,7 @@
            <string>Total return considera proventos reinvestidos</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
          </widget>
         </item>
@@ -163,16 +208,11 @@
      </layout>
     </widget>
    </item>
-
    <item>
     <layout class="QGridLayout" name="gridLayoutResumo">
-     <property name="horizontalSpacing">
+     <property name="spacing">
       <number>8</number>
      </property>
-     <property name="verticalSpacing">
-      <number>8</number>
-     </property>
-
      <item row="0" column="0">
       <widget class="QGroupBox" name="grpResumo1">
        <property name="title">
@@ -224,7 +264,6 @@
        </layout>
       </widget>
      </item>
-
      <item row="0" column="1">
       <widget class="QGroupBox" name="grpResumo2">
        <property name="title">
@@ -276,7 +315,6 @@
        </layout>
       </widget>
      </item>
-
      <item row="0" column="2">
       <widget class="QGroupBox" name="grpResumo3">
        <property name="title">
@@ -328,7 +366,6 @@
        </layout>
       </widget>
      </item>
-
      <item row="0" column="3">
       <widget class="QGroupBox" name="grpResumo4">
        <property name="title">
@@ -382,13 +419,11 @@
      </item>
     </layout>
    </item>
-
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
       <number>0</number>
      </property>
-
      <widget class="QWidget" name="tabGeral">
       <attribute name="title">
        <string>Geral</string>
@@ -489,7 +524,6 @@
            </layout>
           </widget>
          </item>
-
          <item>
           <widget class="QGroupBox" name="grpIndicadoresExtras">
            <property name="title">
@@ -571,7 +605,6 @@
          </item>
         </layout>
        </item>
-
        <item>
         <widget class="QGroupBox" name="grpObservacoes">
          <property name="title">
@@ -593,7 +626,6 @@
        </item>
       </layout>
      </widget>
-
      <widget class="QWidget" name="tabRetornoRisco">
       <attribute name="title">
        <string>Retorno e Risco</string>
@@ -601,11 +633,11 @@
       <layout class="QVBoxLayout" name="verticalLayoutTabRetornoRisco">
        <item>
         <widget class="QTableWidget" name="tblRetornoRisco">
-         <property name="columnCount">
-          <number>6</number>
-         </property>
          <property name="rowCount">
           <number>9</number>
+         </property>
+         <property name="columnCount">
+          <number>6</number>
          </property>
          <attribute name="horizontalHeaderDefaultSectionSize">
           <number>130</number>
@@ -655,7 +687,6 @@
            <string>Alpha</string>
           </property>
          </row>
-
          <column>
           <property name="text">
            <string>Métrica</string>
@@ -690,7 +721,6 @@
        </item>
       </layout>
      </widget>
-
      <widget class="QWidget" name="tabCapm">
       <attribute name="title">
        <string>CAPM e Benchmark</string>
@@ -739,7 +769,6 @@
          </item>
         </layout>
        </item>
-
        <item>
         <layout class="QHBoxLayout" name="horizontalLayoutCapmTables">
          <item>
@@ -821,7 +850,6 @@
            </layout>
           </widget>
          </item>
-
          <item>
           <widget class="QGroupBox" name="grpCapmMetricas">
            <property name="title">
@@ -905,7 +933,6 @@
        </item>
       </layout>
      </widget>
-
      <widget class="QWidget" name="tabDividendos">
       <attribute name="title">
        <string>Dividendos e Preços</string>
@@ -937,7 +964,6 @@
        </item>
       </layout>
      </widget>
-
      <widget class="QWidget" name="tabNotas">
       <attribute name="title">
        <string>Notas</string>
@@ -952,10 +978,8 @@
        </item>
       </layout>
      </widget>
-
     </widget>
    </item>
-
    <item>
     <layout class="QHBoxLayout" name="horizontalLayoutBottom">
      <item>
@@ -994,7 +1018,6 @@
      </item>
     </layout>
    </item>
-
   </layout>
  </widget>
  <resources/>

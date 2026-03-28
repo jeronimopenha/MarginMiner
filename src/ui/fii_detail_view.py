@@ -73,7 +73,7 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
 
         self.btnFechar.clicked.connect(self.close)
 
-        self.selic_df = self.load_selic_cache()
+        #self.selic_df = self.load_selic_cache()
 
         self.fill_basic_data()
         self.init_empty_tables()
