@@ -71,8 +71,9 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
         self.btnAtualizarDados.clicked.connect(self.update_market_data)
         self.btnRecalcularMetricas.clicked.connect(self.recalculate_metrics)
 
-
         self.btnFechar.clicked.connect(self.close)
+
+        self.selic_df = self.load_selic_cache()
 
         self.fill_basic_data()
         self.init_empty_tables()
@@ -242,13 +243,15 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
             "Calmar": 6,
             "Beta": 7,
             "Alpha": 8,
+            "SELIC média": 9,
         }
 
         for col_idx, (_, wdf) in enumerate(windows):
             total_ret = FiiMetrics.total_return(wdf)
             cagr = FiiMetrics.cagr(wdf)
             vol = FiiMetrics.volatility_annualized(wdf)
-            sharpe = FiiMetrics.sharpe(wdf, rf_annual=0.0)
+            rf_annual = FiiMetrics.avg_selic_for_window(wdf)
+            sharpe = FiiMetrics.sharpe(wdf, rf_annual=rf_annual)
             mdd = FiiMetrics.max_drawdown(wdf)
 
             self._set_metric_item(row_map["Retorno total"], col_idx, self._fmt_metric_pct(total_ret))
@@ -268,7 +271,8 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
         self.lblRet12.setText(self._fmt_metric_pct(FiiMetrics.total_return(df12)))
         self.lblCagr5.setText(self._fmt_metric_pct(FiiMetrics.cagr(df5)))
         self.lblVol12.setText(self._fmt_metric_pct(FiiMetrics.volatility_annualized(df12)))
-        self.lblSharpe12.setText(self._fmt_metric_num(FiiMetrics.sharpe(df12, rf_annual=0.0)))
+        rf12 = FiiMetrics.average_rf_annual_for_window(df12, self.selic_df)
+        self.lblSharpe12.setText(self._fmt_metric_num(FiiMetrics.sharpe(df12, rf_annual=rf12)))
         self.lblMaxDrawdown.setText(self._fmt_metric_pct(FiiMetrics.max_drawdown(df12)))
 
     def fill_market_tables(self):
@@ -298,6 +302,27 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
         price_model = SimplePandasModel(price_df)
         self.tablePrecos.setModel(price_model)
         self._price_model = price_model
+
+    def load_selic_cache(self) -> pd.DataFrame:
+        path = Path(self.base_path) / "data" / "cache" / "macro" / "selic.parquet"
+
+        if not path.exists():
+            return pd.DataFrame()
+
+        try:
+            df = pd.read_parquet(path)
+            df["Date"] = pd.to_datetime(df["Date"])
+            df = df.set_index("Date").sort_index()
+
+            df["selic_annual"] = pd.to_numeric(df["selic_annual"], errors="coerce")
+            df = df.dropna(subset=["selic_annual"])
+
+            # se estiver em percentual, descomente:
+            # df["selic_annual"] = df["selic_annual"] / 100.0
+
+            return df
+        except Exception:
+            return pd.DataFrame()
 
     def _set_metric_item(self, row, col, text):
         item = QtWidgets.QTableWidgetItem(text)
