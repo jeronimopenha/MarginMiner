@@ -422,7 +422,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tabGeral">
       <attribute name="title">
@@ -980,14 +980,14 @@
      <item>
       <widget class="QPushButton" name="btnAtualizarDados">
        <property name="text">
-        <string>Atualizar dados</string>
+        <string>Atualizar dados Web</string>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="btnRecalcularMetricas">
        <property name="text">
-        <string>Recalcular métricas</string>
+        <string>Recalcular métricas locais</string>
        </property>
       </widget>
      </item>
