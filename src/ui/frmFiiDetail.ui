@@ -121,54 +121,6 @@
        </spacer>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
-        <item>
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>Selic Utilizada (pode ser alterada):</string>
-          </property>
-         </widget>
-        </item>
-        <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
-         <widget class="QLineEdit" name="txtSelic">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>90</width>
-            <height>32</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>90</width>
-            <height>32</height>
-           </size>
-          </property>
-          <property name="inputMask">
-           <string>##.00%;_</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
        <layout class="QVBoxLayout" name="verticalLayoutHeaderRight">
         <item>
          <widget class="QLabel" name="lblPrecoTitulo">
@@ -267,7 +219,7 @@
      <item row="0" column="1">
       <widget class="QGroupBox" name="grpResumo2">
        <property name="title">
-        <string>Risco</string>
+        <string>Risco 12m</string>
        </property>
        <layout class="QFormLayout" name="formLayoutResumo2">
         <item row="0" column="0">
@@ -318,13 +270,13 @@
      <item row="0" column="2">
       <widget class="QGroupBox" name="grpResumo3">
        <property name="title">
-        <string>Retorno</string>
+        <string>Retorno 12m</string>
        </property>
        <layout class="QFormLayout" name="formLayoutResumo3">
         <item row="0" column="0">
          <widget class="QLabel" name="labelRet12Titulo">
           <property name="text">
-           <string>Total Return 12m:</string>
+           <string>Total Return :</string>
           </property>
          </widget>
         </item>
@@ -369,7 +321,7 @@
      <item row="0" column="3">
       <widget class="QGroupBox" name="grpResumo4">
        <property name="title">
-        <string>CAPM</string>
+        <string>CAPM 12m</string>
        </property>
        <layout class="QFormLayout" name="formLayoutResumo4">
         <item row="0" column="0">
@@ -422,7 +374,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tabGeral">
       <attribute name="title">
@@ -527,7 +479,7 @@
          <item>
           <widget class="QGroupBox" name="grpIndicadoresExtras">
            <property name="title">
-            <string>Indicadores Extras</string>
+            <string>Indicadores Extras 12m</string>
            </property>
            <layout class="QFormLayout" name="formLayoutIndicadoresExtras">
             <item row="0" column="0">

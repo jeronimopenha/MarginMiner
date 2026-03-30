@@ -119,6 +119,7 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
             "Calmar",
             "Beta",
             "Alpha",
+            "SELIC"
         ])
 
         self.tblRetornoRisco.setHorizontalHeaderLabels([
@@ -155,7 +156,7 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
 
             self.market_df = df
             self.fill_market_tables()
-            self.recalculate_metrics()
+            self.recalculate_metrics(use_table_selic=False)
         except Exception as e:
             QtWidgets.QMessageBox.critical(
                 self,
@@ -165,7 +166,7 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
         finally:
             self.btnAtualizarDados.setEnabled(True)
 
-    def recalculate_metrics(self):
+    def recalculate_metrics(self, use_table_selic: bool = True):
         df = getattr(self, "market_df", None)
         if df is None or df.empty:
             return
@@ -179,9 +180,9 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
             tr["Date"].max().strftime("%d/%m/%Y")
         )
 
-        self.fill_window_metrics(tr)
+        self.fill_window_metrics(tr, use_table_selic=use_table_selic)
 
-    def fill_window_metrics(self, tr: pd.DataFrame):
+    def fill_window_metrics(self, tr: pd.DataFrame, use_table_selic: bool = False):
         windows = [
             ("12m", FiiMetrics.window_slice(tr, months=12)),
             ("3 anos", FiiMetrics.window_slice(tr, years=3)),
@@ -213,7 +214,9 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
             total_ret = FiiMetrics.total_return(wdf)
             cagr = FiiMetrics.cagr(wdf)
             vol = FiiMetrics.volatility_annualized(wdf)
-            rf_annual = FiiMetrics.average_rf_annual_for_window(wdf, self.selic_df)
+
+            rf_annual = self._resolve_rf_annual(wdf, col_idx, use_table_selic)
+
             sharpe = FiiMetrics.sharpe(wdf, rf_annual=rf_annual)
             mdd = FiiMetrics.max_drawdown(wdf)
             calmar = FiiMetrics.calmar(cagr, mdd)
@@ -230,18 +233,35 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
             self._set_metric_item(row_map["Calmar"], col_idx, self._fmt_metric_num(calmar))
             self._set_metric_item(row_map["Beta"], col_idx, self._fmt_metric_num(beta))
             self._set_metric_item(row_map["Alpha"], col_idx, self._fmt_metric_num(alpha))
-            self._set_metric_item(row_map["SELIC"], col_idx, self._fmt_metric_pct(rf_annual))
+            # self._set_metric_item(row_map["SELIC"], col_idx, self._fmt_metric_pct(rf_annual))
+
+            if not use_table_selic:
+                self._set_metric_item(row_map["SELIC"], col_idx, self._fmt_metric_pct(rf_annual))
 
         # cards principais
         df12 = windows[0][1]
         df5 = windows[2][1]
-
-        self.lblRet12.setText(self._fmt_metric_pct(FiiMetrics.total_return(df12)))
-        self.lblCagr5.setText(self._fmt_metric_pct(FiiMetrics.cagr(df5)))
-        self.lblVol12.setText(self._fmt_metric_pct(FiiMetrics.volatility_annualized(df12)))
         rf12 = FiiMetrics.average_rf_annual_for_window(df12, self.selic_df)
-        self.lblSharpe12.setText(self._fmt_metric_num(FiiMetrics.sharpe(df12, rf_annual=rf12)))
-        self.lblMaxDrawdown.setText(self._fmt_metric_pct(FiiMetrics.max_drawdown(df12)))
+
+        total_ret12 = FiiMetrics.total_return(df12)
+        cagr5 = FiiMetrics.cagr(df5)
+        vol12 = FiiMetrics.volatility_annualized(df12)
+        sharpe12 = FiiMetrics.sharpe(df12, rf_annual=rf12)
+        mdd12 = FiiMetrics.max_drawdown(df12)
+        calmar12 = FiiMetrics.calmar(cagr5, mdd12)
+        sortino12 = FiiMetrics.sortino(df12, rf_annual=rf12)
+        beta12 = FiiMetrics.beta(df12, win_market["12m"])
+        alpha12 = FiiMetrics.alpha(df12, win_market["12m"], rf12)
+
+        self.lblRet12.setText(self._fmt_metric_pct(total_ret12))
+        self.lblCagr5.setText(self._fmt_metric_pct(cagr5))
+        self.lblVol12.setText(self._fmt_metric_pct(vol12))
+        self.lblSharpe12.setText(self._fmt_metric_num(sharpe12))
+        self.lblMaxDrawdown.setText(self._fmt_metric_pct(mdd12))
+        self.lblSortino.setText(self._fmt_metric_num(sortino12))
+        self.lblBeta.setText(self._fmt_metric_num(beta12))
+        self.lblAlpha.setText(self._fmt_metric_num(alpha12))
+        self.lblCalmar.setText(self._fmt_metric_num(calmar12))
 
     def fill_market_tables(self):
         df = getattr(self, "market_df", None)
@@ -284,6 +304,35 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
         if value is None:
             return "--"
         return _fmt_float(value, decimals=2)
+
+    def _get_selic_from_table(self, col_idx: int):
+        item = self.tblRetornoRisco.item(9, col_idx)  # linha SELIC
+        if item is None:
+            return None
+
+        txt = item.text().strip()
+        if not txt or txt == "--":
+            return None
+
+        txt = txt.replace("%", "").replace(",", ".").strip()
+
+        try:
+            val = float(txt)
+        except ValueError:
+            return None
+
+        if val <= 0:
+            return 0.0
+
+        return val / 100.0
+
+    def _resolve_rf_annual(self, wdf: pd.DataFrame, col_idx: int, use_table_selic: bool) -> float:
+        if not use_table_selic:
+            rf_table = self._get_selic_from_table(col_idx)
+            if rf_table is not None:
+                return rf_table
+
+        return FiiMetrics.average_rf_annual_for_window(wdf, self.selic_df)
 
 
 def _is_null(value) -> bool:
