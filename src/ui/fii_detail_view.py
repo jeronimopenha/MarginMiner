@@ -1,7 +1,8 @@
 from PyQt6 import QtWidgets
 import pandas as pd
 
-from src.data.market_cache import MarketCache
+from src.report.pdf_report import PdfReport
+from PyQt6.QtWidgets import QFileDialog
 from src.data.market_downloader import MarketDownloader
 from src.data.selic_cache import SelicCache
 from src.ui.frmFiiDetail import Ui_DlgFiiDetails
@@ -23,6 +24,7 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
 
         self.btnAtualizarDados.clicked.connect(self.update_market_data)
         self.btnRecalcularMetricas.clicked.connect(self.recalculate_metrics)
+        self.btnExportarPdf.clicked.connect(self.export_pdf)
 
         self.btnFechar.clicked.connect(self.close)
 
@@ -241,7 +243,8 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
         # cards principais
         df12 = windows[0][1]
         df5 = windows[2][1]
-        rf12 = FiiMetrics.average_rf_annual_for_window(df12, self.selic_df)
+        rf12 = self._resolve_rf_annual(df12, 0, use_table_selic)
+        # FiiMetrics.average_rf_annual_for_window(df12, self.selic_df)
 
         total_ret12 = FiiMetrics.total_return(df12)
         cagr5 = FiiMetrics.cagr(df5)
@@ -252,6 +255,10 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
         sortino12 = FiiMetrics.sortino(df12, rf_annual=rf12)
         beta12 = FiiMetrics.beta(df12, win_market["12m"])
         alpha12 = FiiMetrics.alpha(df12, win_market["12m"], rf12)
+        trackin_error12 = FiiMetrics.tracking_error(df12, win_market["12m"])
+        info_ratio = FiiMetrics.information_ratio(df12, win_market["12m"])
+        treynor = FiiMetrics.treynor(df12, rf12, beta12)
+        jensen_alpha = FiiMetrics.jensen_alpha(df12, win_market["12m"], rf12, beta12)
 
         self.lblRet12.setText(self._fmt_metric_pct(total_ret12))
         self.lblCagr5.setText(self._fmt_metric_pct(cagr5))
@@ -262,6 +269,10 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
         self.lblBeta.setText(self._fmt_metric_num(beta12))
         self.lblAlpha.setText(self._fmt_metric_num(alpha12))
         self.lblCalmar.setText(self._fmt_metric_num(calmar12))
+        self.lblTrackingError.setText(self._fmt_metric_pct(trackin_error12))
+        self.lblInformationRatio.setText(self._fmt_metric_num(info_ratio))
+        self.lblTreynor.setText(self._fmt_metric_num(treynor))
+        self.lblJensenAlpha.setText(self._fmt_metric_pct(jensen_alpha))
 
     def fill_market_tables(self):
         df = getattr(self, "market_df", None)
@@ -333,6 +344,19 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
                 return rf_table
 
         return FiiMetrics.average_rf_annual_for_window(wdf, self.selic_df)
+
+    def export_pdf(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Salvar PDF",
+            f"{self.lblTicker.text()}.pdf",
+            "PDF (*.pdf)"
+        )
+
+        if not path:
+            return
+
+        PdfReport.generate(self, path)
 
 
 def _is_null(value) -> bool:

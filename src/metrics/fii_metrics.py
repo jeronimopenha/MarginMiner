@@ -266,3 +266,89 @@ class FiiMetrics:
             return None
 
         return asset_return - (rf_annual + beta * (market_return - rf_annual))
+
+    @staticmethod
+    def tracking_error(asset_df: pd.DataFrame, market_df: pd.DataFrame):
+        if asset_df is None or market_df is None:
+            return None
+        if asset_df.empty or market_df.empty:
+            return None
+
+        a = asset_df[["Date", "total_return_daily"]].copy()
+        m = market_df[["Date", "total_return_daily"]].copy()
+
+        a["Date"] = pd.to_datetime(a["Date"], errors="coerce")
+        m["Date"] = pd.to_datetime(m["Date"], errors="coerce")
+
+        merged = pd.merge(a, m, on="Date", how="inner", suffixes=("_a", "_m"))
+        if len(merged) < 2:
+            return None
+
+        ra = pd.to_numeric(merged["total_return_daily_a"], errors="coerce")
+        rm = pd.to_numeric(merged["total_return_daily_m"], errors="coerce")
+
+        diff = (ra - rm).dropna()
+        if len(diff) < 2:
+            return None
+
+        return diff.std(ddof=1) * (252 ** 0.5)
+
+    @staticmethod
+    def information_ratio(asset_df: pd.DataFrame, market_df: pd.DataFrame):
+        if asset_df is None or market_df is None:
+            return None
+        if asset_df.empty or market_df.empty:
+            return None
+
+        a = asset_df[["Date", "total_return_daily"]].copy()
+        m = market_df[["Date", "total_return_daily"]].copy()
+
+        a["Date"] = pd.to_datetime(a["Date"], errors="coerce")
+        m["Date"] = pd.to_datetime(m["Date"], errors="coerce")
+
+        merged = pd.merge(a, m, on="Date", how="inner", suffixes=("_a", "_m"))
+        if len(merged) < 2:
+            return None
+
+        ra = pd.to_numeric(merged["total_return_daily_a"], errors="coerce")
+        rm = pd.to_numeric(merged["total_return_daily_m"], errors="coerce")
+
+        diff = (ra - rm).dropna()
+        if len(diff) < 2:
+            return None
+
+        te = diff.std(ddof=1)
+        if te == 0 or pd.isna(te):
+            return None
+
+        return (diff.mean() / te) * (252 ** 0.5)
+
+    @staticmethod
+    def treynor(asset_df: pd.DataFrame, rf_annual: float, beta: float):
+        if asset_df is None or asset_df.empty:
+            return None
+        if beta is None or beta == 0 or pd.isna(beta):
+            return None
+
+        cagr = FiiMetrics.cagr(asset_df)
+        if cagr is None or pd.isna(cagr):
+            return None
+
+        return (cagr - rf_annual) / beta
+
+    @staticmethod
+    def jensen_alpha(asset_df: pd.DataFrame, market_df: pd.DataFrame, rf_annual: float, beta: float):
+        if asset_df is None or market_df is None:
+            return None
+        if asset_df.empty or market_df.empty:
+            return None
+        if beta is None or pd.isna(beta):
+            return None
+
+        ra = FiiMetrics.cagr(asset_df)
+        rm = FiiMetrics.cagr(market_df)
+
+        if ra is None or rm is None:
+            return None
+
+        return ra - (rf_annual + beta * (rm - rf_annual))

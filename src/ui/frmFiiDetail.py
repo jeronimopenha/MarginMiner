@@ -430,6 +430,9 @@ class Ui_DlgFiiDetails(object):
         self.btnRecalcularMetricas = QtWidgets.QPushButton(parent=DlgFiiDetails)
         self.btnRecalcularMetricas.setObjectName("btnRecalcularMetricas")
         self.horizontalLayoutBottom.addWidget(self.btnRecalcularMetricas)
+        self.btnExportarPdf = QtWidgets.QPushButton(parent=DlgFiiDetails)
+        self.btnExportarPdf.setObjectName("btnExportarPdf")
+        self.horizontalLayoutBottom.addWidget(self.btnExportarPdf)
         spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
         self.horizontalLayoutBottom.addItem(spacerItem3)
         self.btnFechar = QtWidgets.QPushButton(parent=DlgFiiDetails)
@@ -571,6 +574,7 @@ class Ui_DlgFiiDetails(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabNotas), _translate("DlgFiiDetails", "Notas"))
         self.btnAtualizarDados.setText(_translate("DlgFiiDetails", "Atualizar dados Web"))
         self.btnRecalcularMetricas.setText(_translate("DlgFiiDetails", "Recalcular métricas locais"))
+        self.btnExportarPdf.setText(_translate("DlgFiiDetails", "Exportar para PDF"))
         self.btnFechar.setText(_translate("DlgFiiDetails", "Fechar"))
 
 

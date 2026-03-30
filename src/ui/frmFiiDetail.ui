@@ -944,6 +944,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btnExportarPdf">
+       <property name="text">
+        <string>Exportar para PDF</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer name="horizontalSpacerBottom">
        <property name="orientation">
         <enum>Qt::Orientation::Horizontal</enum>
