@@ -217,6 +217,28 @@ class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):
             cagr = FiiMetrics.cagr(wdf)
             vol = FiiMetrics.volatility_annualized(wdf)
 
+            '''df2 = FiiMetrics.total_return(wdf)
+
+            print(wdf["total_return_daily"].describe())
+
+            print("\nMAIORES:")
+            print(wdf[["Date", "Close", "Dividends", "total_return_daily"]]
+                  .sort_values("total_return_daily")
+                  .tail(10))
+
+            print("\nMENORES:")
+            print(wdf[["Date", "Close", "Dividends", "total_return_daily"]]
+                  .sort_values("total_return_daily")
+                  .head(10))'''
+            '''df2 = wdf.copy()
+            df2["price_return"] = df2["Close"].pct_change()
+
+            print(df2.loc[
+                      (df2["total_return_daily"].abs() > 0.10) | (df2["price_return"].abs() > 0.10),
+                      ["Date", "Close", "Adj Close", "Dividends", "price_return", "total_return_daily"]
+                  ].sort_values("Date"))'''
+
+
             rf_annual = self._resolve_rf_annual(wdf, col_idx, use_table_selic)
 
             sharpe = FiiMetrics.sharpe(wdf, rf_annual=rf_annual)
