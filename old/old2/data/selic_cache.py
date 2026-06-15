@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 import pandas as pd
 
-from src.data.selic_downloader import SelicDownloader
+from old.old2.data.selic_downloader import SelicDownloader
 from src.util import Util
 
 

@@ -1,14 +1,14 @@
 from PyQt6 import QtWidgets
 import pandas as pd
 
-from src.report.pdf_report import PdfReport
+from old.old2.report.pdf_report import PdfReport
 from PyQt6.QtWidgets import QFileDialog
-from src.data.market_downloader import MarketDownloader
-from src.data.selic_cache import SelicCache
-from src.ui.frmFiiDetail import Ui_DlgFiiDetails
-from src.data.asset_downloader import FiiDownloader
-from src.metrics.fii_metrics import FiiMetrics
-from src.ui.simple_pandas_model import SimplePandasModel
+from old.old2.data.market_downloader import MarketDownloader
+from old.old2.data.selic_cache import SelicCache
+from old.old2.ui.frmFiiDetail import Ui_DlgFiiDetails
+from old.old2.data.asset_downloader import FiiDownloader
+from old.old2.metrics.fii_metrics import FiiMetrics
+from old.old2.ui.simple_pandas_model import SimplePandasModel
 
 
 class FiiDetailView(QtWidgets.QDialog, Ui_DlgFiiDetails):

@@ -2,11 +2,11 @@ from datetime import timedelta
 import pandas as pd
 import yfinance as yf
 
-from src.data.market_cache import MarketCache
+from old.old2.data.asset_cache import FiiCache
 from src.util import Util
 
 
-class MarketDownloader:
+class FiiDownloader:
     @staticmethod
     def yahoo_ticker(ticker: str) -> str:
         ticker = str(ticker).upper().strip()
@@ -16,7 +16,7 @@ class MarketDownloader:
 
     @staticmethod
     def download_full_history(ticker: str) -> pd.DataFrame:
-        yticker = MarketDownloader.yahoo_ticker(ticker)
+        yticker = FiiDownloader.yahoo_ticker(ticker)
         df = yf.download(
             yticker,
             period="10y",
@@ -53,23 +53,23 @@ class MarketDownloader:
 
     @staticmethod
     def update_history(ticker: str) -> pd.DataFrame:
-        cached = MarketCache.load(ticker)
+        cached = FiiCache.load(ticker)
 
         if cached.empty:
-            fresh = MarketDownloader.download_full_history(ticker)
+            fresh = FiiDownloader.download_full_history(ticker)
             if not fresh.empty:
-                MarketCache.save(ticker, fresh)
+                FiiCache.save(ticker, fresh)
             return fresh
 
         last_date = cached["Date"].max()
         if pd.isna(last_date):
-            fresh = MarketDownloader.download_full_history(ticker)
+            fresh = FiiDownloader.download_full_history(ticker)
             if not fresh.empty:
-                MarketCache.save(ticker, fresh)
+                FiiCache.save(ticker, fresh)
             return fresh
 
         start = (pd.Timestamp(last_date) - timedelta(days=5)).date()
-        yticker = MarketDownloader.yahoo_ticker(ticker)
+        yticker = FiiDownloader.yahoo_ticker(ticker)
 
         df_new = yf.download(
             yticker,
@@ -100,5 +100,5 @@ class MarketDownloader:
         merged = merged.dropna(subset=["Date"])
         merged = merged.sort_values("Date").drop_duplicates(subset=["Date"], keep="last")
 
-        MarketCache.save(ticker, merged)
+        FiiCache.save(ticker, merged)
         return merged

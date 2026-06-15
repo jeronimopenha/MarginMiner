@@ -2,11 +2,11 @@ from datetime import timedelta
 import pandas as pd
 import yfinance as yf
 
-from src.data.asset_cache import FiiCache
+from old.old2.data.market_cache import MarketCache
 from src.util import Util
 
 
-class FiiDownloader:
+class MarketDownloader:
     @staticmethod
     def yahoo_ticker(ticker: str) -> str:
         ticker = str(ticker).upper().strip()
@@ -16,7 +16,7 @@ class FiiDownloader:
 
     @staticmethod
     def download_full_history(ticker: str) -> pd.DataFrame:
-        yticker = FiiDownloader.yahoo_ticker(ticker)
+        yticker = MarketDownloader.yahoo_ticker(ticker)
         df = yf.download(
             yticker,
             period="10y",
@@ -53,23 +53,23 @@ class FiiDownloader:
 
     @staticmethod
     def update_history(ticker: str) -> pd.DataFrame:
-        cached = FiiCache.load(ticker)
+        cached = MarketCache.load(ticker)
 
         if cached.empty:
-            fresh = FiiDownloader.download_full_history(ticker)
+            fresh = MarketDownloader.download_full_history(ticker)
             if not fresh.empty:
-                FiiCache.save(ticker, fresh)
+                MarketCache.save(ticker, fresh)
             return fresh
 
         last_date = cached["Date"].max()
         if pd.isna(last_date):
-            fresh = FiiDownloader.download_full_history(ticker)
+            fresh = MarketDownloader.download_full_history(ticker)
             if not fresh.empty:
-                FiiCache.save(ticker, fresh)
+                MarketCache.save(ticker, fresh)
             return fresh
 
         start = (pd.Timestamp(last_date) - timedelta(days=5)).date()
-        yticker = FiiDownloader.yahoo_ticker(ticker)
+        yticker = MarketDownloader.yahoo_ticker(ticker)
 
         df_new = yf.download(
             yticker,
@@ -100,5 +100,5 @@ class FiiDownloader:
         merged = merged.dropna(subset=["Date"])
         merged = merged.sort_values("Date").drop_duplicates(subset=["Date"], keep="last")
 
-        FiiCache.save(ticker, merged)
+        MarketCache.save(ticker, merged)
         return merged

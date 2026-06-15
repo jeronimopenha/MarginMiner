@@ -2,10 +2,10 @@ import pandas as pd
 
 from PyQt6 import QtCore, QtWidgets
 
-from src.common.Parse import Parse
-from src.ui.frmFiiScreen import Ui_Frame
-from src.ui.fii_detail_view import FiiDetailView
-from src.ui.pandas_table_model import PandasTableModel
+from old.old2.common.Parse import Parse
+from old.old2.ui.frmFiiScreen import Ui_Frame
+from old.old2.ui.fii_detail_view import FiiDetailView
+from old.old2.ui.pandas_table_model import PandasTableModel
 from src.util import Util
 
 
