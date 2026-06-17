@@ -1,3 +1,704 @@
+from pathlib import Path
+import sys
+
+import pandas as pd
+import streamlit as st
+
+# Garante que o Python ache o pacote src quando rodar via Streamlit.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+
+from src.data.stocks import daily_stock_history
+from src.data.selic import selic_periods_row
+from src.data.benchmarks import ibov_history, ifix_history
+from src.analytics.stock_metrics import (
+    stock_metrics_by_period,
+    format_metrics_report,
+)
+
+st.set_page_config(
+    page_title="Margin Miner",
+    page_icon="📊",
+    layout="wide",
+)
+
+
+# ==========================================================
+# Helpers
+# ==========================================================
+
+def format_percent(value: float | None) -> str:
+    if value is None or pd.isna(value):
+        return "-"
+
+    return f"{value:.2%}"
+
+
+def format_money(value: float | None) -> str:
+    if value is None or pd.isna(value):
+        return "-"
+
+    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def path_exists(path: str | Path) -> bool:
+    return Path(path).exists()
+
+
+@st.cache_data(show_spinner=False)
+def load_stock_history_cached(ticker: str) -> pd.DataFrame:
+    return daily_stock_history(ticker)
+
+
+@st.cache_data(show_spinner=False)
+def load_selic_periods_cached() -> pd.DataFrame:
+    return selic_periods_row()
+
+
+@st.cache_data(show_spinner=False)
+def load_ibov_cached() -> pd.DataFrame:
+    return ibov_history()
+
+
+@st.cache_data(show_spinner=False)
+def load_ifix_cached() -> pd.DataFrame:
+    return ifix_history()
+
+
+def get_risk_free_by_period() -> dict[str, float]:
+    selic = load_selic_periods_cached()
+
+    return (
+        selic
+        .set_index("")
+        .loc["SELIC"]
+        .to_dict()
+    )
+
+
+def calculate_stock_metrics(ticker: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    history = load_stock_history_cached(ticker)
+
+    risk_free_by_period = get_risk_free_by_period()
+
+    metrics = stock_metrics_by_period(
+        history,
+        risk_free_by_period=risk_free_by_period,
+    )
+
+    formatted_metrics = format_metrics_report(metrics)
+
+    return history, metrics, formatted_metrics
+
+
+def latest_close(df: pd.DataFrame) -> float | None:
+    if df.empty or "close" not in df.columns:
+        return None
+
+    return float(df["close"].iloc[-1])
+
+
+def latest_date(df: pd.DataFrame):
+    if df.empty or "date" not in df.columns:
+        return None
+
+    return pd.to_datetime(df["date"].iloc[-1]).date()
+
+
+# ==========================================================
+# Sidebar
+# ==========================================================
+
+st.sidebar.title("Margin Miner")
+
+page = st.sidebar.radio(
+    "Menu",
+    [
+        "Dashboard",
+        "Ranking",
+        "Ativo",
+        "Valuation",
+        "Dados locais",
+    ],
+)
+
+st.sidebar.divider()
+
+default_ticker = st.sidebar.text_input(
+    "Ticker para análise",
+    value="ITSA4",
+).strip().upper()
+
+
+# ==========================================================
+# Dashboard
+# ==========================================================
+
+def dashboard():
+    st.title("📊 Margin Miner")
+
+    st.write(
+        "Painel inicial do Margin Miner. A ideia aqui é enxergar rapidamente "
+        "o estado dos dados locais e entrar nos módulos de ranking, ativo e valuation."
+    )
+
+    st.subheader("Status dos dados principais")
+
+    status_rows = [
+        {
+            "Base": "Selic",
+            "Arquivo esperado": "storage/selic/daily_selic.parquet",
+            "Existe?": path_exists("storage/selic/daily_selic.parquet"),
+        },
+        {
+            "Base": "IBOV",
+            "Arquivo esperado": "storage/benchmarks/IBOV/history.parquet",
+            "Existe?": path_exists("storage/benchmarks/IBOV/history.parquet"),
+        },
+        {
+            "Base": "IFIX",
+            "Arquivo esperado": "storage/benchmarks/IFIX/history.parquet",
+            "Existe?": path_exists("storage/benchmarks/IFIX/history.parquet"),
+        },
+        {
+            "Base": "Ranking",
+            "Arquivo esperado": "storage/rankings/latest.parquet",
+            "Existe?": path_exists("storage/rankings/latest.parquet"),
+        },
+        {
+            "Base": "Fundamentos",
+            "Arquivo esperado": "storage/fundamentus/latest.parquet",
+            "Existe?": path_exists("storage/fundamentus/latest.parquet"),
+        },
+    ]
+
+    st.dataframe(
+        pd.DataFrame(status_rows),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.subheader("Resumo dos benchmarks")
+
+    col1, col2, col3 = st.columns(3)
+
+    try:
+        ibov = load_ibov_cached()
+        col1.metric(
+            "IBOV",
+            f"{latest_close(ibov):,.0f}".replace(",", "."),
+            f"Última data: {latest_date(ibov)}",
+        )
+    except Exception as exc:
+        col1.error(f"Erro IBOV: {exc}")
+
+    try:
+        ifix = load_ifix_cached()
+        col2.metric(
+            "IFIX",
+            f"{latest_close(ifix):,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            f"Última data: {latest_date(ifix)}",
+        )
+    except Exception as exc:
+        col2.error(f"Erro IFIX: {exc}")
+
+    try:
+        selic = load_selic_periods_cached()
+        selic_12m = selic.set_index("").loc["SELIC", "12m"]
+        col3.metric(
+            "Selic 12m anualizada",
+            format_percent(selic_12m),
+        )
+    except Exception as exc:
+        col3.error(f"Erro Selic: {exc}")
+
+    st.info(
+        "Nesta primeira versão, a interface ainda não depende de ranking pronto. "
+        "Vamos usar esta tela para guiar quais dados faltam."
+    )
+
+
+if page == "Dashboard":
+    dashboard()
+
+
+# ==========================================================
+# Ranking
+# ==========================================================
+
+elif page == "Ranking":
+    st.title("🏆 Rankings")
+
+    ranking_path = Path("storage/rankings/latest.parquet")
+
+    if not ranking_path.exists():
+        st.warning(
+            "Ainda não existe ranking salvo em `storage/rankings/latest.parquet`."
+        )
+
+        st.write(
+            "Rode primeiro no terminal:"
+        )
+
+        st.code(
+            "python main.py"
+        )
+
+        st.stop()
+
+    ranking = pd.read_parquet(ranking_path)
+
+    st.success("Ranking local encontrado.")
+
+    st.subheader("Filtros")
+
+    col1, col2, col3 = st.columns(3)
+
+    only_ok = col1.checkbox(
+        "Mostrar apenas ativos válidos",
+        value=True,
+    )
+
+    min_liquidity = col2.number_input(
+        "Liquidez mínima 12m",
+        min_value=0.0,
+        value=1_000_000.0,
+        step=1_000_000.0,
+    )
+
+    min_score = col3.slider(
+        "Score mínimo",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.0,
+        step=0.05,
+    )
+
+    filtered = ranking.copy()
+
+    if only_ok and "status" in filtered.columns:
+        filtered = filtered[filtered["status"] == "ok"]
+
+    if "liquidity_12m" in filtered.columns:
+        filtered = filtered[
+            filtered["liquidity_12m"].fillna(0) >= min_liquidity
+            ]
+
+    if "score_quant" in filtered.columns:
+        filtered = filtered[
+            filtered["score_quant"].fillna(0) >= min_score
+            ]
+
+    st.subheader("Ranking quantitativo")
+
+    display_columns = [
+        "ticker",
+        "sector",
+        "company_type",
+        "latest_price",
+        "latest_date",
+        "liquidity_12m",
+
+        "cagr_total_5A",
+        "sharpe_total_5A",
+        "sortino_total_5A",
+        "calmar_total_5A",
+        "drawdown_total_5A",
+        "vol_total_5A",
+
+        "score_return_5A",
+        "score_sharpe_5A",
+        "score_sortino_5A",
+        "score_drawdown_5A",
+        "score_liquidity",
+        "score_quant",
+    ]
+
+    existing_columns = [
+        col for col in display_columns
+        if col in filtered.columns
+    ]
+
+    st.dataframe(
+        filtered[existing_columns],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.caption(
+        "Ranking provisório usando apenas preço, dividendos, Selic e risco. "
+        "Ainda não inclui P/L, P/VP, ROE, FCL, dívida ou valuation."
+    )
+
+    with st.expander("Ver dados brutos completos"):
+        st.dataframe(
+            filtered,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
+# ==========================================================
+# Página do ativo
+# ==========================================================
+
+elif page == "Ativo":
+    st.title(f"📈 Ativo — {default_ticker}")
+
+    try:
+        history, metrics, formatted_metrics = calculate_stock_metrics(default_ticker)
+
+        current_price = latest_close(history)
+        current_date = latest_date(history)
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric("Preço atual", format_money(current_price))
+        col2.metric("Última data", str(current_date))
+        col3.metric("Linhas históricas", len(history))
+
+        st.subheader("Histórico de preço")
+
+        chart_df = history[["date", "close"]].copy()
+        chart_df = chart_df.set_index("date")
+
+        st.line_chart(chart_df)
+
+        st.subheader("Dividendos registrados")
+
+        dividends = history[history["dividend"] > 0][["date", "dividend"]].copy()
+
+        if dividends.empty:
+            st.info("Nenhum dividendo encontrado no histórico local.")
+        else:
+            st.dataframe(
+                dividends.tail(30),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+        st.subheader("Métricas quantitativas")
+
+        st.dataframe(
+            formatted_metrics,
+            use_container_width=True,
+        )
+
+        st.caption(
+            "Essas métricas vêm dos dados históricos locais: preço, dividendos e Selic."
+        )
+
+    except Exception as exc:
+        st.error(f"Erro ao carregar {default_ticker}: {exc}")
+
+
+# ==========================================================
+# Valuation
+# ==========================================================
+
+elif page == "Valuation":
+    st.title(f"🧮 Valuation — {default_ticker}")
+
+    st.write(
+        "Primeira versão do valuation. Por enquanto, alguns dados ainda são manuais. "
+        "A ideia é descobrir quais campos precisam ser automatizados."
+    )
+
+    try:
+        history, metrics, formatted_metrics = calculate_stock_metrics(default_ticker)
+        current_price = latest_close(history)
+
+    except Exception:
+        history = pd.DataFrame()
+        metrics = pd.DataFrame()
+        formatted_metrics = pd.DataFrame()
+        current_price = None
+
+    st.subheader("Dados de mercado")
+
+    col1, col2 = st.columns(2)
+
+    price_used = col1.number_input(
+        "Preço usado",
+        min_value=0.0,
+        value=float(current_price) if current_price else 0.0,
+        step=0.01,
+    )
+
+    margin_of_safety = col2.number_input(
+        "Margem de segurança desejada",
+        min_value=0.0,
+        max_value=0.9,
+        value=0.15,
+        step=0.01,
+        format="%.2f",
+    )
+
+    st.subheader("Dados fundamentalistas")
+
+    col1, col2, col3 = st.columns(3)
+
+    base_value_type = col1.selectbox(
+        "Base do valuation",
+        [
+            "LPA",
+            "FCL por ação",
+            "Dividendo por ação",
+        ],
+    )
+
+    base_value = col2.number_input(
+        f"Valor base ({base_value_type})",
+        min_value=0.0,
+        value=1.50,
+        step=0.01,
+    )
+
+    payout = col3.number_input(
+        "Payout estimado",
+        min_value=0.0,
+        max_value=1.5,
+        value=0.50,
+        step=0.01,
+        format="%.2f",
+    )
+
+    st.subheader("Premissas")
+
+    col1, col2, col3 = st.columns(3)
+
+    growth_1_3 = col1.number_input(
+        "Crescimento anos 1 a 3",
+        min_value=-0.50,
+        max_value=1.00,
+        value=0.05,
+        step=0.01,
+        format="%.2f",
+    )
+
+    perpetual_growth = col2.number_input(
+        "Crescimento perpetuidade",
+        min_value=-0.10,
+        max_value=0.10,
+        value=0.02,
+        step=0.01,
+        format="%.2f",
+    )
+
+    discount_rate = col3.number_input(
+        "Taxa de desconto",
+        min_value=0.01,
+        max_value=0.50,
+        value=0.16,
+        step=0.01,
+        format="%.2f",
+    )
+
+    st.subheader("Cálculo provisório")
+
+    if discount_rate <= perpetual_growth:
+        st.error(
+            "A taxa de desconto precisa ser maior que o crescimento na perpetuidade."
+        )
+    else:
+        projected_1 = base_value * (1 + growth_1_3)
+        projected_2 = projected_1 * (1 + growth_1_3)
+        projected_3 = projected_2 * (1 + growth_1_3)
+
+        terminal_cash_flow = projected_3 * (1 + perpetual_growth)
+        terminal_value = terminal_cash_flow / (discount_rate - perpetual_growth)
+
+        present_value = (
+                projected_1 / ((1 + discount_rate) ** 1)
+                + projected_2 / ((1 + discount_rate) ** 2)
+                + projected_3 / ((1 + discount_rate) ** 3)
+                + terminal_value / ((1 + discount_rate) ** 3)
+        )
+
+        fair_price = present_value
+        target_price = fair_price * (1 - margin_of_safety)
+
+        upside_to_fair = (
+            fair_price / price_used - 1
+            if price_used > 0
+            else None
+        )
+
+        upside_to_target = (
+            target_price / price_used - 1
+            if price_used > 0
+            else None
+        )
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        col1.metric("Preço justo", format_money(fair_price))
+        col2.metric("Preço teto", format_money(target_price))
+        col3.metric("Margem até valor justo", format_percent(upside_to_fair))
+        col4.metric("Margem até preço teto", format_percent(upside_to_target))
+
+        valuation_table = pd.DataFrame(
+            [
+                {
+                    "Ano": "1",
+                    "Fluxo projetado": projected_1,
+                    "Valor presente": projected_1 / ((1 + discount_rate) ** 1),
+                },
+                {
+                    "Ano": "2",
+                    "Fluxo projetado": projected_2,
+                    "Valor presente": projected_2 / ((1 + discount_rate) ** 2),
+                },
+                {
+                    "Ano": "3",
+                    "Fluxo projetado": projected_3,
+                    "Valor presente": projected_3 / ((1 + discount_rate) ** 3),
+                },
+                {
+                    "Ano": "Terminal",
+                    "Fluxo projetado": terminal_value,
+                    "Valor presente": terminal_value / ((1 + discount_rate) ** 3),
+                },
+            ]
+        )
+
+        st.dataframe(
+            valuation_table,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        st.subheader("Notas pessoais")
+
+        notes = st.text_area(
+            "Anotações sobre a tese",
+            height=150,
+            placeholder="Ex: empresa excelente, mas quero margem maior; risco regulatório; payout alto; crescimento limitado...",
+        )
+
+        if st.button("Salvar valuation"):
+            st.warning(
+                "Ainda não implementei o SQLite de valuations. "
+                "Esta tela serve primeiro para validar os campos necessários."
+            )
+
+    with st.expander("Métricas quantitativas usadas como apoio"):
+        if formatted_metrics.empty:
+            st.info("Sem métricas carregadas.")
+        else:
+            st.dataframe(
+                formatted_metrics,
+                use_container_width=True,
+            )
+
+
+# ==========================================================
+# Dados locais
+# ==========================================================
+
+elif page == "Dados locais":
+    st.title("🗂️ Dados locais")
+
+    st.write(
+        "Aqui vamos acompanhar os arquivos locais usados pelo Margin Miner."
+    )
+
+    paths = [
+        "storage/selic/daily_selic.parquet",
+        "storage/benchmarks/IBOV/history.parquet",
+        "storage/benchmarks/IFIX/history.parquet",
+        "storage/fundamentus/latest.parquet",
+        "storage/rankings/latest.parquet",
+        "storage/valuations/valuations.sqlite",
+    ]
+
+    rows = []
+
+    for p in paths:
+        path = Path(p)
+
+        rows.append(
+            {
+                "arquivo": p,
+                "existe": path.exists(),
+                "tamanho_kb": round(path.stat().st_size / 1024, 2) if path.exists() else None,
+            }
+        )
+
+    st.dataframe(
+        pd.DataFrame(rows),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+storage/
+├── prices/
+├── benchmarks/
+├── selic/
+├── fundamentus/
+│   ├── latest.parquet
+│   └── snapshots/
+│       └── 2026-06-17.parquet
+├── rankings/
+│   └── 2026-06-17.parquet
+└── valuations/
+    └── valuations.sqlite
+
+src/
+├── data/
+│   ├── stocks.py
+│   ├── selic.py
+│   ├── benchmarks.py
+│   └── fundamentus.py
+│
+├── analytics/
+│   ├── stock_metrics.py
+│   ├── benchmark_metrics.py
+│   ├── fundamental_metrics.py
+│   └── ranking.py
+│
+├── valuation/
+│   ├── models.py
+│   ├── storage.py
+│   └── report.py
+│
+└── web/
+    └── app.py
+
+
+Menu
+├── Rankings
+│   ├── Ações
+│   ├── FIIs
+│   ├── Bancos
+│   ├── Seguradoras
+│   ├── Elétricas
+│   └── Oportunidades
+│
+├── Ativos
+│   ├── ITSA4
+│   ├── BBSE3
+│   ├── SAPR4
+│   └── ...
+│
+├── Valuation
+│   ├── Novo valuation
+│   ├── Valuations salvos
+│   └── Comparar valuations
+│
+├── Relatórios
+│   ├── PDF de valuation
+│   ├── PDF de ranking
+│   └── PDF de tese
+│
+└── Configurações
+    ├── Tickers
+    ├── Tipos de empresa
+    ├── Pesos do ranking
+    └── Premissas padrão
+
 
 src/
 ├── data/
@@ -459,3 +1160,509 @@ caixa
 dívida
 FCO
 FCL
+
+--------------------------------------------------
+
+Sim. Eu acho que você não precisa do V2 completo agora. O que você descreveu é muito mais um Margin Miner operacional, não uma base contábil completa estilo terminal profissional.
+
+O que você precisa para usar de verdade é:
+
+1. Dados de mercado
+   - preço histórico
+   - dividendos
+   - Selic
+   - IBOV
+   - IFIX
+
+2. Indicadores de risco e retorno
+   - CAGR
+   - Sharpe
+   - Sortino
+   - Calmar
+   - drawdown
+   - volatilidade
+   - beta
+   - CAPM
+
+3. Indicadores fundamentalistas atuais
+   - P/L
+   - P/VP
+   - DY
+   - ROE
+   - ROIC
+   - margens
+   - dívida
+   - EV/EBITDA
+   - liquidez
+   - setor/subsetor
+
+4. Dados para valuation
+   - lucro atual ou LPA
+   - FCL ou FCL por ação
+   - patrimônio/VPA
+   - payout
+   - ROE
+   - crescimento histórico ou estimado
+
+Com isso você já faz ranking, filtro, valuation projetivo e relatório. A CVM completa fica para depois, se você quiser auditar ou enriquecer histórico.
+
+O Margin Miner que você quer é isso
+
+Você quer abrir um site e ter:
+
+Menu
+├── Rankings
+│   ├── Ações
+│   ├── FIIs
+│   ├── Bancos
+│   ├── Seguradoras
+│   ├── Elétricas
+│   └── Oportunidades
+│
+├── Ativos
+│   ├── ITSA4
+│   ├── BBSE3
+│   ├── SAPR4
+│   └── ...
+│
+├── Valuation
+│   ├── Novo valuation
+│   ├── Valuations salvos
+│   └── Comparar valuations
+│
+├── Relatórios
+│   ├── PDF de valuation
+│   ├── PDF de ranking
+│   └── PDF de tese
+│
+└── Configurações
+    ├── Tickers
+    ├── Tipos de empresa
+    ├── Pesos do ranking
+    └── Premissas padrão
+
+Isso é bem mais objetivo do que “baixar toda a CVM e interpretar tudo”.
+
+O que falta para esse MVP
+
+Você já tem boa parte do bloco quantitativo:
+
+Selic     OK
+IBOV      OK
+IFIX      OK
+preços    OK
+dividendos OK
+Sharpe/Sortino/Calmar em andamento
+
+Agora faltam dois blocos:
+
+1. Snapshot fundamentalista atual
+2. Sistema de valuation salvo
+
+O snapshot fundamentalista pode vir de uma fonte simplificada, como Fundamentus, StatusInvest ou outra fonte que seja fácil de capturar. Para começar, eu escolheria uma fonte só.
+
+A CVM completa entraria depois.
+
+Minha arquitetura recomendada agora
+
+Eu faria assim:
+
+storage/
+├── prices/
+├── benchmarks/
+├── selic/
+├── fundamentus/
+│   ├── latest.parquet
+│   └── snapshots/
+│       └── 2026-06-17.parquet
+├── rankings/
+│   └── 2026-06-17.parquet
+└── valuations/
+    └── valuations.sqlite
+
+E no código:
+
+src/
+├── data/
+│   ├── stocks.py
+│   ├── selic.py
+│   ├── benchmarks.py
+│   └── fundamentus.py
+│
+├── analytics/
+│   ├── stock_metrics.py
+│   ├── benchmark_metrics.py
+│   ├── fundamental_metrics.py
+│   └── ranking.py
+│
+├── valuation/
+│   ├── models.py
+│   ├── storage.py
+│   └── report.py
+│
+└── web/
+    └── app.py
+Como o fluxo funcionaria
+1. Atualização diária
+
+Você roda:
+
+update_all(tickers)
+
+Ele faz:
+
+1. Atualiza preços/dividendos dos tickers
+2. Atualiza Selic
+3. Atualiza IBOV e IFIX
+4. Atualiza snapshot fundamentalista
+5. Calcula indicadores de risco/retorno
+6. Junta tudo em uma tabela final
+7. Salva ranking_snapshot do dia
+
+Resultado:
+
+storage/rankings/2026-06-17.parquet
+
+Essa tabela teria uma linha por ativo.
+
+2. Ranking
+
+Você abre o site e vê:
+
+ticker | setor | tipo | P/L | P/VP | ROE | DY | Sharpe 5A | CAGR Total 5A | Beta | Score
+
+Aí filtra:
+
+tipo = elétrica
+ROE > 12%
+P/L < 10
+Sharpe Total 5A positivo
+dívida líquida/EBITDA < 3
+margem de segurança > 10%
+3. Página do ativo
+
+Ao clicar em ITSA4, aparece:
+
+Resumo
+Preço atual
+Indicadores atuais
+Risco/retorno histórico
+Dividendos
+Comparação com IBOV
+Últimos valuations
+Notas pessoais
+4. Valuation pré-preenchido
+
+Você clica em “Novo valuation” e ele já puxa:
+
+ticker
+preço atual
+LPA
+VPA
+ROE
+payout
+DY
+lucro líquido
+FCL
+crescimento histórico
+Selic
+CAPM
+beta
+margem de segurança padrão
+
+Aí você edita as premissas:
+
+taxa de desconto
+crescimento 3 anos
+crescimento perpetuidade
+margem desejada
+cenário conservador/base/otimista
+observações pessoais
+
+E salva.
+
+5. Valuation salvo
+
+Quando salvar, ele não deve salvar só o resultado. Ele deve salvar o snapshot do dia.
+
+Exemplo:
+
+valuation_id
+ticker
+data
+preço_usado
+lpa_usado
+fcl_usado
+roe_usado
+payout_usado
+selic_usada
+beta_usado
+capm_usado
+premissas
+preço_justo
+preço_teto
+margem_segurança
+notas_automaticas
+notas_pessoais
+
+Isso é importante porque daqui a 6 meses você poderá abrir e ver:
+
+“Por que eu achei ITSA4 barata naquele dia?”
+SQLite para valuations
+
+Para valuations salvos, eu usaria SQLite, não Parquet.
+
+Parquet é ótimo para tabela grande de dados. Mas valuation salvo é mais parecido com um registro de trabalho:
+
+id
+ticker
+data
+premissas
+notas
+resultado
+snapshot
+
+Então:
+
+storage/valuations/valuations.sqlite
+
+é perfeito.
+
+Depois você pode gerar PDF a partir do SQLite.
+
+PDF de valuation
+
+O PDF poderia ter:
+
+1. Capa
+   - ticker
+   - data
+   - preço atual
+   - preço justo
+   - preço teto
+   - margem de segurança
+
+2. Dados usados
+   - LPA
+   - FCL
+   - ROE
+   - payout
+   - Selic
+   - beta
+   - CAPM
+
+3. Cenários
+   - conservador
+   - base
+   - otimista
+
+4. Análise automática
+   - preço vs valor
+   - qualidade do retorno
+   - risco histórico
+   - dividendos
+   - endividamento
+
+5. Notas pessoais
+   - sua tese
+   - riscos
+   - gatilhos de compra/venda
+
+Isso casa muito bem com o seu jeito de investir.
+
+O mínimo de dados fundamentalistas que falta
+
+Para ações, eu buscaria primeiro só isto:
+
+ticker
+empresa
+setor
+subsetor
+cotacao
+data_ult_cotacao
+
+pl
+pvp
+psr
+dy
+p_ebit
+ev_ebit
+ev_ebitda
+
+roe
+roic
+margem_ebit
+margem_liquida
+liquidez_corrente
+
+valor_mercado
+valor_firma
+patrimonio_liquido
+numero_acoes
+
+divida_bruta_patrimonio
+divida_liquida_patrimonio
+divida_liquida_ebitda
+
+crescimento_receita_5a
+
+E para valuation, especificamente:
+
+lpa
+vpa
+dpa
+lucro_liquido
+fcl
+fcl_por_acao
+payout
+
+Se a fonte simplificada não trouxer FCL direto, a gente pode fazer duas coisas:
+
+1. usar FCL quando disponível;
+2. permitir input manual/editável no valuation.
+
+Isso é importante: o valuation não precisa depender 100% da captura automática.
+
+Ele pode vir pré-preenchido e você corrige.
+
+Isso reduz muito a complexidade
+
+Em vez de fazer agora:
+
+CVM
+├── DFP
+├── ITR
+├── BPA
+├── BPP
+├── DRE
+├── DFC
+├── DVA
+├── contas contábeis
+├── consolidado/individual
+├── reapresentações
+└── mapeamento por setor
+
+Você faz:
+
+Fundamentus/snapshot
++ Yahoo preços
++ B3 benchmarks
++ Bacen Selic
++ valuation editável
+
+Isso é muito mais coerente com o que você quer agora.
+
+Sobre começar a interface web agora
+
+Eu acho que sim, agora faz sentido começar a interface web, mas com uma regra:
+
+A interface não deve calcular tudo do zero. Ela deve ler os arquivos já processados.
+
+Ou seja, o site lê:
+
+storage/rankings/latest.parquet
+storage/fundamentus/latest.parquet
+storage/valuations/valuations.sqlite
+storage/prices/...
+
+E mostra.
+
+Isso evita que abrir o site demore.
+
+Eu começaria com Streamlit
+
+Para seu caso, Streamlit é perfeito para MVP porque você faz rápido:
+
+sidebar
+menus
+tabelas filtráveis
+gráficos
+inputs de valuation
+botão salvar
+botão gerar PDF
+
+Depois, se quiser algo mais profissional, migra para:
+
+FastAPI + React/Vue
+
+Mas agora eu não iria para isso. Seria complexidade demais.
+
+Ordem que eu seguiria a partir daqui
+Etapa 1 — Fundamentus snapshot
+
+Criar:
+
+src/data/fundamentus.py
+
+Funções:
+
+fundamentus_snapshot(ticker)
+fundamentus_snapshot_many(tickers)
+save_fundamentus_snapshot(df)
+load_latest_fundamentus_snapshot()
+Etapa 2 — Ranking snapshot
+
+Criar:
+
+src/analytics/ranking.py
+
+Função:
+
+build_ranking_snapshot(tickers)
+
+Ela junta:
+
+fundamentus atual
++
+métricas de preço/risco
++
+tipo da empresa
+
+E salva:
+
+storage/rankings/latest.parquet
+storage/rankings/2026-06-17.parquet
+Etapa 3 — Interface web básica
+
+Criar:
+
+src/web/app.py
+
+Com páginas:
+
+Ranking
+Ativo
+Valuation
+Valuations salvos
+Configurações
+Etapa 4 — Valuation editável e salvável
+
+Criar:
+
+src/valuation/models.py
+src/valuation/storage.py
+
+Com SQLite.
+
+Etapa 5 — PDF
+
+Depois que valuation salvo estiver funcionando, gerar PDF.
+
+Minha resposta direta
+
+Sim, eu acho que com o que você já tem, falta só pegar os últimos dados fundamentalistas de forma mais simples.
+
+Você não precisa processar a CVM inteira agora.
+
+O MVP do Margin Miner deve ser:
+
+1. Atualizar dados automaticamente
+2. Gerar ranking
+3. Abrir ativo
+4. Pré-preencher valuation
+5. Salvar valuation com snapshot
+6. Gerar relatório/PDF
+
+Isso já é extremamente útil.
+
+E a CVM fica como evolução futura, não como requisito para começar.

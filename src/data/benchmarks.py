@@ -10,7 +10,6 @@ import pandas as pd
 import requests
 from dateutil.relativedelta import relativedelta
 
-
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart"
 
 B3_INDEX_DOWNLOAD_URL = (
@@ -21,7 +20,6 @@ B3_INDEX_DOWNLOAD_URL = (
 BENCHMARK_TICKERS = {
     "IBOV": "^BVSP",
 }
-
 
 B3_MONTHS = {
     "JAN": 1,
@@ -68,6 +66,49 @@ B3_MONTHS = {
     "DEZ": 12,
     "DEZEMBRO": 12,
 }
+
+
+def _decode_bytes_best_effort(content: bytes) -> str:
+    for encoding in ["utf-8-sig", "latin1", "cp1252"]:
+        try:
+            return content.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+
+    return content.decode("utf-8", errors="replace")
+
+
+def _decode_base64_text_if_needed(text: str) -> str:
+    """
+    Alguns downloads da B3 vêm como Base64.
+
+    Ex:
+        SUZJWCAtIDIwMTY...
+
+    Que decodifica para:
+        IFIX - 2016
+        Dia;Jan;Fev;...
+    """
+
+    compact = "".join(str(text).split())
+
+    if len(compact) < 40:
+        return text
+
+    if not re.fullmatch(r"[A-Za-z0-9+/=]+", compact):
+        return text
+
+    try:
+        decoded_bytes = base64.b64decode(compact, validate=True)
+        decoded_text = _decode_bytes_best_effort(decoded_bytes)
+    except Exception:
+        return text
+
+    # Só aceita a decodificação se parecer mesmo uma tabela da B3.
+    if "Dia;" in decoded_text or "IFIX" in decoded_text or "IBOV" in decoded_text:
+        return decoded_text
+
+    return text
 
 
 def normalize_benchmark_ticker(benchmark: str) -> str:
@@ -129,10 +170,10 @@ def _standardize_benchmark_df(df: pd.DataFrame) -> pd.DataFrame:
 # ==========================================================
 
 def _fetch_benchmark_history_yahoo(
-    benchmark: str,
-    initial_date: date,
-    final_date: date,
-    interval: str = "1d",
+        benchmark: str,
+        initial_date: date,
+        final_date: date,
+        interval: str = "1d",
 ) -> pd.DataFrame:
     ticker = normalize_benchmark_ticker(benchmark)
 
@@ -258,15 +299,28 @@ def _encode_b3_payload(index: str, year: int, language: str = "pt-br") -> str:
 
 
 def _decode_b3_response(response: requests.Response) -> str:
+    """
+    Decodifica a resposta bruta da B3.
+
+    A B3 pode devolver:
+    - texto normal;
+    - CSV;
+    - JSON;
+    - ou CSV codificado em Base64.
+    """
+
     content = response.content
 
     for encoding in ["utf-8-sig", "latin1", "cp1252"]:
         try:
-            return content.decode(encoding)
+            text = content.decode(encoding)
+            break
         except UnicodeDecodeError:
             continue
+    else:
+        text = content.decode("utf-8", errors="replace")
 
-    return content.decode("utf-8", errors="replace")
+    return _decode_base64_text_if_needed(text)
 
 
 def _read_b3_csv_like_text(text: str) -> pd.DataFrame:
@@ -274,6 +328,10 @@ def _read_b3_csv_like_text(text: str) -> pd.DataFrame:
 
     if not text:
         return pd.DataFrame()
+
+    # Caso ainda tenha vindo Base64 por algum motivo.
+    text = _decode_base64_text_if_needed(text)
+    text = text.lstrip("\ufeff").strip()
 
     # Se vier JSON com campo interno.
     if text.startswith("{"):
@@ -285,17 +343,35 @@ def _read_b3_csv_like_text(text: str) -> pd.DataFrame:
                     value = data.get(key)
 
                     if isinstance(value, str):
-                        text = value.lstrip("\ufeff").strip()
+                        text = _decode_base64_text_if_needed(value)
+                        text = text.lstrip("\ufeff").strip()
                         break
 
         except json.JSONDecodeError:
             pass
 
-    # Proteção: se veio HTML/Angular/Cloudflare, não é a tabela.
     lowered = text.lower()
 
+    # Proteção: se veio HTML/Angular/Cloudflare, não é a tabela.
     if "<html" in lowered or "<!doctype" in lowered or "<app-root" in lowered:
         return pd.DataFrame()
+
+    lines = text.splitlines()
+
+    # A B3 coloca uma linha de título antes da tabela:
+    # IFIX - 2016
+    # Dia;Jan;Fev;...
+    header_index = None
+
+    for i, line in enumerate(lines):
+        clean_line = line.strip()
+
+        if clean_line.startswith("Dia;") or clean_line.startswith("DIA;"):
+            header_index = i
+            break
+
+    if header_index is not None:
+        text = "\n".join(lines[header_index:])
 
     # Tenta separadores comuns.
     for sep in [";", "\t", ","]:
@@ -453,9 +529,9 @@ def _parse_ifix_download_table(df: pd.DataFrame, year: int) -> pd.DataFrame:
 
 
 def _save_b3_debug_response(
-    year: int,
-    text: str,
-    debug_dir: str | Path = "storage/debug",
+        year: int,
+        text: str,
+        debug_dir: str | Path = "storage/debug",
 ) -> Path:
     path = Path(debug_dir)
     path.mkdir(parents=True, exist_ok=True)
@@ -509,8 +585,8 @@ def _fetch_ifix_b3_year(year: int) -> pd.DataFrame:
 
 
 def _fetch_ifix_history_b3(
-    initial_date: date,
-    final_date: date,
+        initial_date: date,
+        final_date: date,
 ) -> pd.DataFrame:
     frames = []
     errors = []
@@ -542,15 +618,16 @@ def _fetch_ifix_history_b3(
     df = df[
         (df["date"] >= pd.Timestamp(initial_date))
         & (df["date"] <= pd.Timestamp(final_date))
-    ]
+        ]
 
     return _standardize_benchmark_df(df)
 
+
 def _benchmark_history_ifix_b3(
-    years: int = 10,
-    final_date: date | None = None,
-    storage_dir: str | Path = "storage/benchmarks",
-    overlap_days: int = 15,
+        years: int = 10,
+        final_date: date | None = None,
+        storage_dir: str | Path = "storage/benchmarks",
+        overlap_days: int = 15,
 ) -> pd.DataFrame:
     if final_date is None:
         final_date = date.today()
@@ -607,7 +684,7 @@ def _benchmark_history_ifix_b3(
     df = df[
         (df["date"] >= pd.Timestamp(initial_date))
         & (df["date"] <= pd.Timestamp(final_date))
-    ]
+        ]
 
     df = _standardize_benchmark_df(df)
 
@@ -621,12 +698,12 @@ def _benchmark_history_ifix_b3(
 # ==========================================================
 
 def benchmark_history(
-    benchmark: str,
-    years: int = 10,
-    interval: str = "1d",
-    final_date: date | None = None,
-    storage_dir: str | Path = "storage/benchmarks",
-    overlap_days: int = 15,
+        benchmark: str,
+        years: int = 10,
+        interval: str = "1d",
+        final_date: date | None = None,
+        storage_dir: str | Path = "storage/benchmarks",
+        overlap_days: int = 15,
 ) -> pd.DataFrame:
     benchmark_name = benchmark.strip().upper()
 
@@ -694,7 +771,7 @@ def benchmark_history(
     df = df[
         (df["date"] >= pd.Timestamp(initial_date))
         & (df["date"] <= pd.Timestamp(final_date))
-    ]
+        ]
 
     df = _standardize_benchmark_df(df)
 
@@ -704,8 +781,8 @@ def benchmark_history(
 
 
 def ibov_history(
-    years: int = 10,
-    final_date: date | None = None,
+        years: int = 10,
+        final_date: date | None = None,
 ) -> pd.DataFrame:
     return benchmark_history(
         benchmark="IBOV",
@@ -715,8 +792,8 @@ def ibov_history(
 
 
 def ifix_history(
-    years: int = 10,
-    final_date: date | None = None,
+        years: int = 10,
+        final_date: date | None = None,
 ) -> pd.DataFrame:
     return benchmark_history(
         benchmark="IFIX",

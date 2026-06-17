@@ -5,11 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7bceea9e-24e8-4eb5-ada9-d7c3d1fea51c" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/data/benchmarks.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/data/cvm.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/analytics/ranking.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/data/tickers.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/web/app.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/web/common.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/web/loaders.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/web/pages/asset.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/web/pages/dashboard.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/web/pages/local_data.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/web/pages/ranking.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/web/pages/valuation.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/analytics/stock_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/analytics/stock_metrics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data/benchmarks.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/data/benchmarks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ideias.txt" beforeDir="false" afterPath="$PROJECT_DIR$/src/ideias.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/storage/benchmarks/IBOV/history.parquet" beforeDir="false" afterPath="$PROJECT_DIR$/storage/benchmarks/IBOV/history.parquet" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/storage/debug/b3_ifix_raw_2016.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/storage/selic/daily_selic.parquet" beforeDir="false" afterPath="$PROJECT_DIR$/storage/selic/daily_selic.parquet" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/storage/stocks/ITSA4.SA/price_history.parquet" beforeDir="false" afterPath="$PROJECT_DIR$/storage/stocks/ITSA4.SA/price_history.parquet" afterDir="false" />
     </list>
@@ -40,18 +52,22 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.Margin Miner Streamlit .executor": "Run",
+    "Python.app.executor": "Run",
     "Python.exec.executor": "Run",
     "Python.main.executor": "Run",
+    "Python.tickers.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "main",
+    "last_opened_file_path": "/home/jeronimo/GIT/MarginMiner",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "preferences.lookFeel",
+    "settings.editor.selected.configurable": "reference.idesettings.debugger.python",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -61,7 +77,54 @@
       <recent name="$PROJECT_DIR$/old/old2" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.Margin Miner Streamlit ">
+    <configuration name="Margin Miner Streamlit " type="PythonConfigurationType" factoryName="Python">
+      <module name="MarginMiner" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.14 (MarginMiner)" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="streamlit" />
+      <option name="PARAMETERS" value="run src/web/app.py" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="true" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="app" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="MarginMiner" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/web" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/web/app.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="MarginMiner" />
       <option name="ENV_FILES" value="" />
@@ -85,9 +148,40 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="tickers" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="MarginMiner" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/data" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/data/tickers.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.Margin Miner Streamlit " />
+      <item itemvalue="Python.tickers" />
+      <item itemvalue="Python.app" />
+      <item itemvalue="Python.main" />
+    </list>
     <recent_temporary>
       <list>
         <item itemvalue="Python.main" />
+        <item itemvalue="Python.tickers" />
+        <item itemvalue="Python.app" />
       </list>
     </recent_temporary>
   </component>
@@ -112,6 +206,8 @@
       <workItem from="1781550442445" duration="1785000" />
       <workItem from="1781567184703" duration="930000" />
       <workItem from="1781721321134" duration="4310000" />
+      <workItem from="1781727694079" duration="1692000" />
+      <workItem from="1781734014144" duration="2515000" />
     </task>
     <servers />
   </component>
@@ -119,7 +215,10 @@
     <option name="version" value="3" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/MarginMiner$main.coverage" NAME="main Coverage Results" MODIFIED="1781726339206" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MarginMiner$Margin_Miner_Streamlit_.coverage" NAME="Margin Miner Streamlit  Coverage Results" MODIFIED="1781736368514" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MarginMiner$main.coverage" NAME="main Coverage Results" MODIFIED="1781735737507" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MarginMiner$app.coverage" NAME="app Coverage Results" MODIFIED="1781734437963" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/web" />
     <SUITE FILE_PATH="coverage/MarginMiner$exec.coverage" NAME="exec Coverage Results" MODIFIED="1777077182947" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MarginMiner$tickers.coverage" NAME="tickers Coverage Results" MODIFIED="1781735323565" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/data" />
   </component>
 </project>
