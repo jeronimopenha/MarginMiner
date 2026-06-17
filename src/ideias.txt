@@ -1,0 +1,461 @@
+
+src/
+├── data/
+│   ├── stocks.py          # preço, volume, dividendos Yahoo
+│   ├── selic.py           # Selic Bacen
+│   └── cvm.py             # DFP/ITR/Cadastro CVM
+│
+├── analytics/
+│   ├── stock_metrics.py   # preço, dividendos, risco
+│   └── fundamentals.py    # indicadores contábeis
+│
+├── reports/
+│   ├── stock_report.py
+│   └── metric_analysis.py
+
+
+1. Dados brutos
+   - Selic
+   - Histórico de ações
+   - Dividendos
+   - Depois fundamentos
+
+2. Cache local
+   - Primeira execução busca tudo
+   - Depois só delta
+   - Futuro servidor atualiza 1x por dia
+   - Arquivo local diário para não recalcular tudo
+
+3. Analytics
+   - Métricas de preço
+   - Métricas com dividendos
+   - Depois P/L, P/VP, ROE, payout, DPA, LPA, margens etc.
+
+4. Relatórios
+   - Terminal primeiro
+   - Help dos indicadores
+   - Interpretação automática dos valores
+   - Depois HTML/tooltips
+
+5. Rankings e valuations
+   - Lista de tickers por tipo de empresa
+   - Rankings quantitativos
+   - Valuation por setor/tipo
+   - Depois interface web
+----------------------------------------------------------------------------------------------
+
+
+Eu separaria assim
+src/
+├── data/
+│   ├── stocks.py          # preço, volume, dividendos Yahoo
+│   ├── selic.py           # Selic Bacen
+│   └── cvm.py             # DFP/ITR/Cadastro CVM
+│
+├── analytics/
+│   ├── stock_metrics.py   # preço, dividendos, risco
+│   └── fundamentals.py    # indicadores contábeis
+│
+├── reports/
+│   ├── stock_report.py
+│   └── metric_analysis.py
+
+A próxima API deve ser algo como:
+
+company_fundamentals("ITSA4")
+
+e por baixo ela faz:
+
+1. Ticker -> empresa/CNPJ/código CVM
+2. Baixa ou lê DFP anual
+3. Baixa ou lê ITR trimestral
+4. Extrai contas contábeis importantes
+5. Salva Parquet
+6. Calcula indicadores
+Dados brutos que precisamos buscar
+Demonstração de Resultado — DRE
+
+Esses são essenciais:
+
+Receita líquida
+Custo dos produtos/serviços
+Lucro bruto
+Despesas operacionais
+EBIT / resultado operacional
+Resultado financeiro
+Lucro antes do IR
+Lucro líquido
+Lucro atribuído aos controladores
+
+Com isso calculamos:
+
+Margem bruta
+Margem EBIT
+Margem líquida
+Crescimento da receita
+Crescimento do lucro
+LPA
+P/L
+Earnings Yield
+Balanço Patrimonial — Ativo
+
+Buscar:
+
+Ativo total
+Ativo circulante
+Caixa e equivalentes
+Aplicações financeiras
+Contas a receber
+Estoques
+Ativo imobilizado
+Ativo intangível
+
+Com isso:
+
+Liquidez corrente
+Giro do ativo
+Capital empregado
+Caixa líquido ou dívida líquida
+Balanço Patrimonial — Passivo e Patrimônio
+
+Buscar:
+
+Passivo total
+Passivo circulante
+Empréstimos e financiamentos de curto prazo
+Empréstimos e financiamentos de longo prazo
+Dívida bruta
+Patrimônio líquido
+Capital social
+Reservas
+Lucros acumulados
+
+Com isso:
+
+VPA
+P/VP
+Dívida líquida
+Dívida líquida / patrimônio
+Dívida líquida / EBITDA
+ROE
+ROA
+Endividamento
+Fluxo de Caixa — DFC
+
+Buscar:
+
+Fluxo de caixa operacional
+Fluxo de caixa de investimento
+Fluxo de caixa de financiamento
+Capex, se disponível ou estimável
+Aumento/redução de caixa
+
+Com isso:
+
+FCO
+FCL
+FCL yield
+P/FCL
+Conversão de lucro em caixa
+FCO / lucro líquido
+FCL / lucro líquido
+Qualidade do lucro
+Proventos e ações
+
+Aqui pode vir de Yahoo/B3/CVM dependendo da disponibilidade:
+
+Dividendos por ação
+JCP por ação
+Quantidade de ações
+Quantidade de ações ordinárias/preferenciais
+Valor de mercado
+Preço atual
+
+Com isso:
+
+DPA
+Dividend yield
+Payout
+LPA
+VPA
+Dividendos / FCL
+Dividendos / lucro
+Indicadores que eu criaria
+1. Indicadores de valuation
+P/L
+P/VP
+P/Receita
+P/EBIT
+EV/EBIT
+EV/EBITDA
+P/FCL
+Earnings Yield
+FCF Yield
+Dividend Yield
+Preço / Caixa Operacional
+
+Para seu estilo, os mais importantes seriam:
+
+P/L
+P/VP
+Earnings Yield
+FCF Yield
+Dividend Yield
+EV/EBIT
+EV/EBITDA
+
+Mas cuidado: EV/EBITDA não serve tão bem para bancos, seguradoras e holdings financeiras.
+
+2. Indicadores de rentabilidade
+ROE
+ROA
+ROIC
+Margem bruta
+Margem EBIT
+Margem EBITDA
+Margem líquida
+Margem FCL
+Giro do ativo
+
+Para sua carteira BEST:
+
+ROE
+ROIC
+Margem líquida
+Margem operacional
+Consistência das margens
+
+Para bancos e seguradoras, ROE é mais importante que EBITDA.
+
+3. Indicadores de crescimento
+Crescimento da receita 1A, 3A, 5A, 10A
+Crescimento do lucro 1A, 3A, 5A, 10A
+Crescimento do patrimônio líquido
+Crescimento do FCO
+Crescimento do FCL
+Crescimento do DPA
+Crescimento do LPA
+
+Aqui entra direto no seu valuation:
+
+g sustentável = ROE × (1 - payout)
+
+E também dá para comparar:
+
+crescimento histórico real
+crescimento sustentável teórico
+crescimento projetado conservador
+4. Indicadores de endividamento
+Dívida bruta
+Dívida líquida
+Dívida líquida / EBITDA
+Dívida líquida / patrimônio líquido
+Dívida bruta / patrimônio líquido
+Caixa / dívida de curto prazo
+Cobertura de juros
+Passivo / ativo
+
+Para elétricas, saneamento, concessões e indústria, isso é essencial.
+
+Para bancos, esses indicadores não funcionam do mesmo jeito.
+
+5. Indicadores de caixa e qualidade do lucro
+FCO / lucro líquido
+FCL / lucro líquido
+FCL / receita
+Capex / receita
+Capex / depreciação
+Lucro líquido acumulado vs FCO acumulado
+Lucro líquido acumulado vs FCL acumulado
+
+Esses são ótimos para evitar empresa que parece barata no lucro, mas não gera caixa.
+
+6. Indicadores de dividendos
+DPA
+DY atual
+DY médio 3A, 5A, 10A
+Payout lucro
+Payout FCL
+Crescimento do DPA
+Consistência de dividendos
+Anos com dividendos
+Anos sem dividendos
+
+Para sua estratégia, eu criaria uma métrica própria:
+
+Qualidade do dividendo
+
+Com base em:
+
+payout sustentável
+FCL cobre dividendos?
+lucro cobre dividendos?
+dívida está aumentando para pagar dividendo?
+dividendo é recorrente ou extraordinário?
+Dados mínimos para começar valuation
+
+Para cada empresa, eu começaria com esta tabela anual:
+
+ano
+ticker
+codigo_cvm
+receita_liquida
+lucro_liquido
+lucro_controladores
+patrimonio_liquido
+ativo_total
+caixa
+divida_bruta
+divida_liquida
+ebit
+ebitda
+fco
+capex
+fcl
+dividendos_totais
+quantidade_acoes
+lpa
+vpa
+dpa
+roe
+roa
+margem_liquida
+payout
+
+E uma tabela trimestral:
+
+ano
+trimestre
+ticker
+receita_liquida
+lucro_liquido
+patrimonio_liquido
+divida_bruta
+caixa
+fco
+fcl
+roe_trimestral
+margem_liquida
+
+A anual serve para:
+
+valuation
+ranking estrutural
+médias de 3/5/10 anos
+consistência
+
+A trimestral serve para:
+
+detectar deterioração recente
+comparar últimos 12 meses
+TTM
+revisar tese
+Cuidado importante: bancos, seguradoras e holdings
+
+Não dá para usar uma régua única.
+
+Bancos
+
+Mais úteis:
+
+P/L
+P/VP
+ROE
+margem financeira
+índice de eficiência
+inadimplência
+PDD
+Basileia
+crescimento da carteira de crédito
+
+Menos úteis:
+
+EV/EBITDA
+Dívida líquida / EBITDA
+FCL tradicional
+Seguradoras
+
+Mais úteis:
+
+P/L
+P/VP
+ROE
+sinistralidade
+índice combinado
+resultado financeiro
+prêmios emitidos
+lucro recorrente
+Elétricas e saneamento
+
+Mais úteis:
+
+EV/EBITDA
+Dívida líquida / EBITDA
+ROIC
+margem EBITDA
+FCL
+payout
+capex
+Holdings
+
+Mais úteis:
+
+P/VP
+desconto sobre valor dos ativos
+dividendos recebidos
+despesas administrativas
+alavancagem
+Próximo passo prático
+
+Eu não criaria todos os indicadores agora diretamente. Primeiro criaria o coletor CVM.
+
+A próxima função deveria ser:
+
+download_cvm_itr(year: int)
+download_cvm_dfp(year: int)
+
+Depois:
+
+load_cvm_statements(year: int, statement_type: "itr" | "dfp")
+
+Depois:
+
+extract_company_accounts(cvm_code, years)
+
+E só depois:
+
+calculate_fundamental_indicators(...)
+
+Isso evita misturar coleta, limpeza e cálculo.
+
+Minha sugestão para amanhã
+
+Começar pelo arquivo:
+
+src/data/cvm.py
+
+com três funções pequenas:
+
+download_cvm_file(url, path)
+load_cvm_dfp(year)
+load_cvm_itr(year)
+
+Depois a gente inspeciona as colunas reais dos CSVs da CVM e decide como mapear:
+
+CD_CVM
+DENOM_CIA
+DT_REFER
+CD_CONTA
+DS_CONTA
+VL_CONTA
+
+Aí sim começamos a extrair:
+
+lucro líquido
+patrimônio líquido
+ativo total
+receita líquida
+caixa
+dívida
+FCO
+FCL
