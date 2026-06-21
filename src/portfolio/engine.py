@@ -329,20 +329,17 @@ def calculate_portfolio(
 
                 if quota_count > EPSILON:
                     quota_value_before_flow = (
-                        equity_before_flow
-                        / quota_count
-                    )
-                else:
-                    quota_value_before_flow = (
-                        INITIAL_QUOTA_VALUE
+                            equity_before_flow
+                            / quota_count
                     )
 
-                new_quotas = (
-                    external_flow
-                    / quota_value_before_flow
-                )
+                    new_quotas = (
+                            external_flow
+                            / quota_value_before_flow
+                    )
 
-                quota_count += new_quotas
+                    quota_count += new_quotas
+
                 cash += external_flow
 
                 total_external_money += external_flow
@@ -379,9 +376,17 @@ def calculate_portfolio(
             + receivables
         )
 
+        if (
+                quota_count <= EPSILON
+                and equity > EPSILON
+        ):
+            quota_count = (
+                    equity / INITIAL_QUOTA_VALUE
+            )
+
         if quota_count > EPSILON:
             quota_value = (
-                equity / quota_count
+                    equity / quota_count
             )
         else:
             quota_value = INITIAL_QUOTA_VALUE
