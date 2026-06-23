@@ -1,21 +1,16 @@
-import pandas as pd
-
-from src.data.stocks import daily_stock_history
-
-
-history = daily_stock_history("BEES3")
-
-history["date"] = pd.to_datetime(
-    history["date"]
-).dt.normalize()
-
-print(
-    history.loc[
-        history["date"] == "2024-10-15",
-        [
-            "date",
-            "close",
-            "adj_close",
-        ],
-    ]
+from src.portfolio.corporate_actions_storage import (
+    add_corporate_action,
 )
+
+
+actions = add_corporate_action(
+    ex_date="2025-09-02",
+    credit_date="2025-09-04",
+    action_type="bonificação",
+    source_ticker="BEES3",
+    target_ticker="BEES3",
+    factor=1.10,
+    notes="Uma nova ação para cada dez ações",
+)
+
+print(actions)

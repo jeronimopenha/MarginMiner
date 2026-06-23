@@ -6,21 +6,211 @@ import streamlit as st
 
 from datetime import date
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+from src.portfolio.corporate_actions_storage import load_corporate_actions, save_corporate_actions, add_corporate_action
 
 from src.data.stocks import daily_stock_history
 from src.portfolio.engine import calculate_portfolio
 from src.portfolio.income_storage import load_income_events, add_income_event, delete_income_event, save_income_events
+
 from src.portfolio.storage import load_transactions, delete_transaction, add_transaction, save_transactions
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 st.set_page_config(
     page_title="Carteira cotizada",
     page_icon="📈",
     layout="wide",
 )
+
+def build_consolidated_operations_table(
+    transactions: pd.DataFrame,
+    corporate_actions: pd.DataFrame,
+) -> pd.DataFrame:
+    rows = []
+
+    if transactions is not None and not transactions.empty:
+        for _, transaction in transactions.iterrows():
+            rows.append(
+                {
+                    "id": transaction["id"],
+                    "date": pd.to_datetime(transaction["date"]).normalize(),
+                    "created_at": transaction.get("created_at"),
+                    "source": "lançamento",
+                    "type": transaction["type"],
+                    "ticker": transaction["ticker"],
+                    "target_ticker": transaction["ticker"],
+                    "quantity": float(transaction["quantity"]),
+                    "unit_price": float(transaction["unit_price"]),
+                    "costs": float(transaction["costs"]),
+                    "factor": None,
+                    "cash_amount": 0.0,
+                    "notes": transaction.get("notes", ""),
+                }
+            )
+
+    if corporate_actions is not None and not corporate_actions.empty:
+        for _, action in corporate_actions.iterrows():
+            rows.append(
+                {
+                    "id": action["id"],
+                    "date": pd.to_datetime(action["credit_date"]).normalize(),
+                    "created_at": action.get("created_at"),
+                    "source": "evento corporativo",
+                    "type": action["action_type"],
+                    "ticker": action["source_ticker"],
+                    "target_ticker": action["target_ticker"],
+                    "quantity": None,
+                    "unit_price": 0.0,
+                    "costs": 0.0,
+                    "factor": float(action["factor"]),
+                    "cash_amount": float(action.get("cash_amount", 0.0)),
+                    "notes": action.get("notes", ""),
+                }
+            )
+
+    if not rows:
+        return pd.DataFrame()
+
+    events = pd.DataFrame(rows)
+
+    events["created_at"] = pd.to_datetime(
+        events["created_at"],
+        errors="coerce",
+    )
+
+    events = events.sort_values(
+        ["date", "created_at", "id"],
+        na_position="last",
+    ).reset_index(drop=True)
+
+    positions: dict[str, float] = {}
+    cost_basis: dict[str, float] = {}
+
+    output_rows = []
+
+    for _, event in events.iterrows():
+        event_type = str(event["type"]).strip().lower()
+        ticker = str(event["ticker"]).strip().upper()
+        target_ticker = str(event["target_ticker"]).strip().upper()
+
+        positions.setdefault(ticker, 0.0)
+        cost_basis.setdefault(ticker, 0.0)
+
+        previous_quantity = positions[ticker]
+        previous_cost = cost_basis[ticker]
+
+        previous_average_price = (
+            previous_cost / previous_quantity
+            if previous_quantity > 0
+            else 0.0
+        )
+
+        quantity = (
+            float(event["quantity"])
+            if pd.notna(event["quantity"])
+            else 0.0
+        )
+
+        unit_price = float(event["unit_price"])
+        costs = float(event["costs"])
+        cash_amount = float(event["cash_amount"])
+
+        total = 0.0
+        quantity_change = 0.0
+        realized_result = 0.0
+
+        if event_type == "compra":
+            total = quantity * unit_price + costs
+
+            positions[ticker] += quantity
+            cost_basis[ticker] += total
+            quantity_change = quantity
+
+        elif event_type == "venda":
+            if quantity > previous_quantity:
+                raise ValueError(
+                    f"Venda de {quantity:g} {ticker} maior que a posição "
+                    f"anterior de {previous_quantity:g}."
+                )
+
+            sale_value = quantity * unit_price - costs
+            sold_cost = previous_average_price * quantity
+            realized_result = sale_value - sold_cost
+
+            positions[ticker] -= quantity
+            cost_basis[ticker] -= sold_cost
+
+            quantity_change = -quantity
+            total = sale_value
+
+            if abs(positions[ticker]) < 1e-9:
+                positions[ticker] = 0.0
+                cost_basis[ticker] = 0.0
+
+        elif event_type in {"bonificação", "bonificacao", "desdobramento", "grupamento"}:
+            factor = float(event["factor"])
+
+            new_quantity = previous_quantity * factor
+            quantity_change = new_quantity - previous_quantity
+
+            positions[ticker] = new_quantity
+
+            total = cash_amount
+
+            if abs(positions[ticker]) < 1e-9:
+                positions[ticker] = 0.0
+                cost_basis[ticker] = 0.0
+
+        elif event_type in {"mudança de ticker", "mudanca de ticker", "conversão", "conversao"}:
+            factor = float(event["factor"])
+
+            positions.setdefault(target_ticker, 0.0)
+            cost_basis.setdefault(target_ticker, 0.0)
+
+            new_quantity = previous_quantity * factor
+            moved_cost = previous_cost
+
+            positions[ticker] = 0.0
+            cost_basis[ticker] = 0.0
+
+            positions[target_ticker] += new_quantity
+            cost_basis[target_ticker] += moved_cost
+
+            quantity_change = -previous_quantity
+            total = cash_amount
+
+        current_quantity = positions.get(ticker, 0.0)
+        current_cost = cost_basis.get(ticker, 0.0)
+
+        current_average_price = (
+            current_cost / current_quantity
+            if current_quantity > 0
+            else 0.0
+        )
+
+        output_rows.append(
+            {
+                "date": event["date"],
+                "source": event["source"],
+                "type": event["type"],
+                "ticker": ticker,
+                "target_ticker": target_ticker,
+                "quantity_change": quantity_change,
+                "quantity_total": current_quantity,
+                "unit_price": unit_price,
+                "total": total,
+                "cost_basis": current_cost,
+                "average_price": current_average_price,
+                "realized_result": realized_result,
+                "factor": event["factor"],
+                "notes": event["notes"],
+            }
+        )
+
+    return pd.DataFrame(output_rows)
 
 
 def format_money(value: float) -> str:
@@ -43,9 +233,14 @@ def load_market_history(
 
 
 def calculate_current_portfolio():
+    transactions = load_transactions()
+    income_events = load_income_events()
+    corporate_actions = load_corporate_actions()
+
     return calculate_portfolio(
-        transactions=load_transactions(),
-        income_events=load_income_events(),
+        transactions=transactions,
+        income_events=income_events,
+        corporate_actions=corporate_actions,
         history_loader=load_market_history,
     )
 
@@ -264,6 +459,7 @@ def render_operations():
             st.error(str(error))
 
     transactions = load_transactions()
+    corporate_actions = load_corporate_actions()
 
     stored_columns = list(transactions.columns)
 
@@ -511,6 +707,85 @@ def render_operations():
 
         st.cache_data.clear()
         st.rerun()
+    st.divider()
+
+    st.subheader("Histórico consolidado")
+
+    consolidated = build_consolidated_operations_table(
+        transactions=load_transactions(),
+        corporate_actions=load_corporate_actions(),
+    )
+
+    if consolidated.empty:
+        st.info("Nenhum lançamento consolidado encontrado.")
+    else:
+        st.dataframe(
+            consolidated[
+                [
+                    "date",
+                    "source",
+                    "type",
+                    "ticker",
+                    "target_ticker",
+                    "quantity_change",
+                    "quantity_total",
+                    "unit_price",
+                    "total",
+                    "average_price",
+                    "cost_basis",
+                    "realized_result",
+                    "factor",
+                    "notes",
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "date": st.column_config.DateColumn(
+                    "Data",
+                    format="DD/MM/YYYY",
+                ),
+                "source": st.column_config.TextColumn("Fonte"),
+                "type": st.column_config.TextColumn("Tipo"),
+                "ticker": st.column_config.TextColumn("Ativo"),
+                "target_ticker": st.column_config.TextColumn("Ativo destino"),
+                "quantity_change": st.column_config.NumberColumn(
+                    "Quantidade",
+                    format="%.6f",
+                ),
+                "quantity_total": st.column_config.NumberColumn(
+                    "Quantidade total",
+                    format="%.6f",
+                ),
+                "unit_price": st.column_config.NumberColumn(
+                    "Preço unitário",
+                    format="R$ %.2f",
+                ),
+                "total": st.column_config.NumberColumn(
+                    "Total",
+                    format="R$ %.2f",
+                ),
+                "average_price": st.column_config.NumberColumn(
+                    "Preço médio",
+                    format="R$ %.4f",
+                ),
+                "cost_basis": st.column_config.NumberColumn(
+                    "Custo acumulado",
+                    format="R$ %.2f",
+                ),
+                "realized_result": st.column_config.NumberColumn(
+                    "Resultado realizado",
+                    format="R$ %.2f",
+                ),
+                "factor": st.column_config.NumberColumn(
+                    "Fator",
+                    format="%.6f",
+                ),
+                "notes": st.column_config.TextColumn("Observação"),
+            },
+        )
+
+
 
 
 def render_income_events():
@@ -770,6 +1045,156 @@ def render_income_events():
         st.rerun()
 
 
+def render_corporate_actions_page() -> None:
+    st.title("Eventos corporativos")
+
+    st.caption(
+        "Use esta tela para bonificações, desdobramentos, grupamentos e conversões. "
+        "Esses eventos alteram quantidade de ações, mas não entram como dinheiro novo."
+    )
+
+    action_type_options = [
+        "bonificação",
+        "desdobramento",
+        "grupamento",
+        "mudança de ticker",
+        "conversão",
+    ]
+
+    with st.form(
+            "corporate_action_form",
+            clear_on_submit=True,
+            enter_to_submit=False,
+    ):
+        col1, col2, col3 = st.columns(3)
+
+        ex_date = col1.date_input("Data ex")
+        credit_date = col2.date_input("Data de crédito")
+        action_type = col3.selectbox("Tipo", action_type_options)
+
+        col1, col2, col3 = st.columns(3)
+
+        source_ticker = col1.text_input(
+            "Ativo de origem",
+            placeholder="BEES3",
+        ).strip().upper()
+
+        needs_target = action_type in {"mudança de ticker", "conversão"}
+
+        target_ticker = col2.text_input(
+            "Ativo de destino",
+            placeholder="PCIP11",
+            disabled=not needs_target,
+        ).strip().upper()
+
+        factor = col3.number_input(
+            "Fator",
+            min_value=0.000001,
+            value=1.0,
+            step=0.01,
+            format="%.6f",
+            help=(
+                "Bonificação de 10%: 1.10. "
+                "Desdobramento 1 para 2: 2.00. "
+                "Grupamento 10 para 1: 0.10. "
+                "Mudança simples de ticker: 1.00."
+            ),
+        )
+
+        cash_amount = st.number_input(
+            "Valor em dinheiro recebido",
+            min_value=0.0,
+            value=0.0,
+            step=0.01,
+            help="Use para sobras/frações pagas em dinheiro, se houver.",
+        )
+
+        notes = st.text_input("Observação")
+
+        submitted = st.form_submit_button(
+            "Salvar evento corporativo",
+            type="primary",
+        )
+
+    if submitted:
+        try:
+            final_target = target_ticker if needs_target else source_ticker
+
+            add_corporate_action(
+                ex_date=ex_date,
+                credit_date=credit_date,
+                action_type=action_type,
+                source_ticker=source_ticker,
+                target_ticker=final_target,
+                factor=factor,
+                cash_amount=cash_amount,
+                notes=notes,
+            )
+
+            st.cache_data.clear()
+            st.success("Evento corporativo salvo.")
+            st.rerun()
+
+        except Exception as exc:
+            st.error(str(exc))
+
+    st.subheader("Eventos cadastrados")
+
+    events = load_corporate_actions()
+
+    if events.empty:
+        st.info("Nenhum evento corporativo cadastrado.")
+        return
+
+    editor_data = events.copy()
+    editor_data.insert(0, "Selecionar", False)
+
+    edited = st.data_editor(
+        editor_data,
+        use_container_width=True,
+        hide_index=True,
+        num_rows="fixed",
+        disabled=["id", "created_at"],
+        column_config={
+            "Selecionar": st.column_config.CheckboxColumn("Selecionar"),
+            "ex_date": st.column_config.DateColumn("Data ex"),
+            "credit_date": st.column_config.DateColumn("Data de crédito"),
+            "action_type": st.column_config.SelectboxColumn(
+                "Tipo",
+                options=action_type_options,
+            ),
+            "source_ticker": st.column_config.TextColumn("Ativo origem"),
+            "target_ticker": st.column_config.TextColumn("Ativo destino"),
+            "factor": st.column_config.NumberColumn("Fator", format="%.6f"),
+            "cash_amount": st.column_config.NumberColumn(
+                "Dinheiro recebido",
+                format="R$ %.2f",
+            ),
+            "notes": st.column_config.TextColumn("Observação"),
+        },
+    )
+
+    col1, col2 = st.columns(2)
+
+    if col1.button("Salvar alterações da tabela", type="primary"):
+        updated = edited.drop(columns=["Selecionar"]).copy()
+        save_corporate_actions(updated)
+
+        st.cache_data.clear()
+        st.success("Eventos corporativos atualizados.")
+        st.rerun()
+
+    selected_ids = edited.loc[edited["Selecionar"], "id"].tolist()
+
+    if col2.button("Excluir selecionados", disabled=not selected_ids):
+        remaining = events[~events["id"].isin(selected_ids)].copy()
+        save_corporate_actions(remaining)
+
+        st.cache_data.clear()
+        st.success("Eventos selecionados excluídos.")
+        st.rerun()
+
+
 def main():
     st.sidebar.title("Carteira")
 
@@ -779,6 +1204,7 @@ def main():
             "Resumo",
             "Compras e vendas",
             "Proventos",
+            "Eventos corporativos",
         ],
     )
 
@@ -796,6 +1222,9 @@ def main():
 
     elif page == "Proventos":
         render_income_events()
+
+    elif page == "Eventos corporativos":
+        render_corporate_actions_page()
 
 
 if __name__ == "__main__":

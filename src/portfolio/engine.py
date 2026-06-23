@@ -1,414 +1,638 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import date
+from typing import Callable
 
 import pandas as pd
-
-from src.data.stocks import daily_stock_history
-from src.portfolio.income_storage import load_income_events
-from src.portfolio.storage import load_transactions
 
 
 INITIAL_QUOTA_VALUE = 1.0
 EPSILON = 1e-9
 
 
-@dataclass
+@dataclass(frozen=True)
 class PortfolioResult:
     history: pd.DataFrame
     positions: pd.DataFrame
     ledger: pd.DataFrame
 
     @property
-    def latest(self):
+    def latest(self) -> pd.Series | None:
         if self.history.empty:
             return None
-
         return self.history.iloc[-1]
 
 
-def prepare_history(
-    history: pd.DataFrame,
-) -> pd.DataFrame:
-
-    history = history[
-        ["date", "close"]
-    ].copy()
-
-    history["date"] = (
-        pd.to_datetime(history["date"])
-        .dt.normalize()
+def _empty_result() -> PortfolioResult:
+    return PortfolioResult(
+        history=pd.DataFrame(),
+        positions=pd.DataFrame(),
+        ledger=pd.DataFrame(),
     )
 
-    history["close"] = pd.to_numeric(
-        history["close"],
-        errors="coerce",
-    )
+
+def _normalize_ticker(value) -> str:
+    return str(value).strip().upper().removesuffix(".SA")
+
+
+def _prepare_history(history: pd.DataFrame, ticker: str) -> pd.DataFrame:
+    required = {"date", "close"}
+    missing = required.difference(history.columns)
+
+    if missing:
+        raise ValueError(f"Histórico de {ticker} sem colunas: {sorted(missing)}")
+
+    result = history[["date", "close"]].copy()
+    result["date"] = pd.to_datetime(result["date"]).dt.normalize()
+    result["close"] = pd.to_numeric(result["close"], errors="coerce")
 
     return (
-        history
-        .dropna(subset=["close"])
+        result.dropna(subset=["close"])
         .sort_values("date")
         .drop_duplicates("date", keep="last")
         .reset_index(drop=True)
     )
 
 
-def find_ex_date(
+def _prepare_transactions(transactions: pd.DataFrame | None) -> pd.DataFrame:
+    columns = [
+        "id",
+        "date",
+        "type",
+        "ticker",
+        "quantity",
+        "unit_price",
+        "costs",
+        "notes",
+        "created_at",
+    ]
+
+    if transactions is None or transactions.empty:
+        return pd.DataFrame(columns=columns)
+
+    result = transactions.copy()
+
+    for column in columns:
+        if column not in result.columns:
+            result[column] = None
+
+    result["date"] = pd.to_datetime(result["date"]).dt.normalize()
+    result["type"] = result["type"].astype(str).str.strip().str.lower()
+    result["ticker"] = result["ticker"].map(_normalize_ticker)
+
+    for column in ["quantity", "unit_price", "costs"]:
+        result[column] = pd.to_numeric(result[column], errors="raise")
+
+    if (~result["type"].isin(["compra", "venda"])).any():
+        raise ValueError("Existem lançamentos com tipo inválido.")
+
+    if (result["quantity"] <= 0).any():
+        raise ValueError("Existem lançamentos com quantidade não positiva.")
+
+    if (result["unit_price"] <= 0).any():
+        raise ValueError("Existem lançamentos com preço não positivo.")
+
+    if (result["costs"] < 0).any():
+        raise ValueError("Existem lançamentos com custos negativos.")
+
+    return result[columns].sort_values(
+        ["date", "created_at", "id"]
+    ).reset_index(drop=True)
+
+
+def _prepare_income_events(income_events: pd.DataFrame | None) -> pd.DataFrame:
+    columns = [
+        "id",
+        "position_date",
+        "payment_date",
+        "ticker",
+        "quantity",
+        "net_amount",
+        "notes",
+        "created_at",
+    ]
+
+    if income_events is None or income_events.empty:
+        return pd.DataFrame(columns=columns)
+
+    result = income_events.copy()
+
+    for column in columns:
+        if column not in result.columns:
+            result[column] = None
+
+    result["position_date"] = pd.to_datetime(
+        result["position_date"]
+    ).dt.normalize()
+    result["payment_date"] = pd.to_datetime(
+        result["payment_date"]
+    ).dt.normalize()
+    result["ticker"] = result["ticker"].map(_normalize_ticker)
+    result["quantity"] = pd.to_numeric(result["quantity"], errors="coerce")
+    result["net_amount"] = pd.to_numeric(result["net_amount"], errors="raise")
+
+    if (result["net_amount"] <= 0).any():
+        raise ValueError("Existem proventos com valor líquido não positivo.")
+
+    if (result["payment_date"] < result["position_date"]).any():
+        raise ValueError("Existe provento com pagamento anterior à posição.")
+
+    return result[columns].sort_values(
+        ["position_date", "payment_date", "created_at", "id"]
+    ).reset_index(drop=True)
+
+
+def _prepare_corporate_actions(
+    corporate_actions: pd.DataFrame | None,
+) -> pd.DataFrame:
+    columns = [
+        "id",
+        "ex_date",
+        "credit_date",
+        "action_type",
+        "source_ticker",
+        "target_ticker",
+        "factor",
+        "cash_amount",
+        "notes",
+        "created_at",
+    ]
+
+    if corporate_actions is None or corporate_actions.empty:
+        return pd.DataFrame(columns=columns)
+
+    result = corporate_actions.copy()
+
+    for column in columns:
+        if column not in result.columns:
+            result[column] = None
+
+    result["ex_date"] = pd.to_datetime(result["ex_date"]).dt.normalize()
+    result["credit_date"] = pd.to_datetime(result["credit_date"]).dt.normalize()
+
+    result["action_type"] = (
+        result["action_type"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .replace(
+            {
+                "bonificacao": "bonificação",
+                "desdobramento": "desdobramento",
+                "grupamento": "grupamento",
+                "mudanca": "mudança de ticker",
+                "mudanca de ticker": "mudança de ticker",
+                "conversao": "conversão",
+            }
+        )
+    )
+
+    valid_types = {
+        "bonificação",
+        "desdobramento",
+        "grupamento",
+        "mudança de ticker",
+        "conversão",
+    }
+
+    if (~result["action_type"].isin(valid_types)).any():
+        raise ValueError("Existem eventos corporativos com tipo inválido.")
+
+    result["source_ticker"] = result["source_ticker"].map(_normalize_ticker)
+
+    result["target_ticker"] = result["target_ticker"].fillna(
+        result["source_ticker"]
+    )
+    result["target_ticker"] = result["target_ticker"].map(_normalize_ticker)
+
+    result["factor"] = pd.to_numeric(result["factor"], errors="raise")
+    result["cash_amount"] = (
+        pd.to_numeric(result["cash_amount"], errors="coerce")
+        .fillna(0.0)
+    )
+
+    if (result["factor"] <= 0).any():
+        raise ValueError("Existem eventos corporativos com fator não positivo.")
+
+    if (result["cash_amount"] < 0).any():
+        raise ValueError("Existem eventos corporativos com dinheiro negativo.")
+
+    if (result["credit_date"] < result["ex_date"]).any():
+        raise ValueError("Existe evento corporativo com crédito anterior à data ex.")
+
+    return result[columns].sort_values(
+        ["ex_date", "credit_date", "created_at", "id"]
+    ).reset_index(drop=True)
+
+
+def _first_market_date_on_or_after(
     history: pd.DataFrame,
-    position_date,
-):
-    position_date = pd.Timestamp(
-        position_date
-    ).normalize()
+    target_date: pd.Timestamp,
+) -> pd.Timestamp:
+    dates = history.loc[history["date"] >= target_date, "date"]
 
-    later_dates = history[
-        history["date"] > position_date
-    ]["date"]
+    if dates.empty:
+        return target_date
 
-    if later_dates.empty:
-        return None
+    return dates.iloc[0]
 
-    return later_dates.iloc[0]
+
+def _adjust_histories_for_corporate_actions(
+    histories: dict[str, pd.DataFrame],
+    corporate_actions: pd.DataFrame,
+) -> dict[str, pd.DataFrame]:
+    adjusted = {
+        ticker: history.copy()
+        for ticker, history in histories.items()
+    }
+
+    if corporate_actions.empty:
+        return adjusted
+
+    same_ticker_actions = corporate_actions[
+        corporate_actions["source_ticker"]
+        == corporate_actions["target_ticker"]
+    ]
+
+    for _, action in same_ticker_actions.iterrows():
+        ticker = action["source_ticker"]
+
+        if ticker not in adjusted:
+            continue
+
+        factor = float(action["factor"])
+        ex_date = action["ex_date"]
+
+        before_event = adjusted[ticker]["date"] < ex_date
+        adjusted[ticker].loc[before_event, "close"] *= factor
+
+    return adjusted
 
 
 def calculate_portfolio(
     transactions: pd.DataFrame,
-    income_events: pd.DataFrame,
-    history_loader=daily_stock_history,
-    final_date=None,
+    income_events: pd.DataFrame | None = None,
+    corporate_actions: pd.DataFrame | None = None,
+    history_loader: Callable[[str], pd.DataFrame] | None = None,
+    final_date: date | pd.Timestamp | None = None,
 ) -> PortfolioResult:
+    transactions = _prepare_transactions(transactions)
+    income_events = _prepare_income_events(income_events)
+    corporate_actions = _prepare_corporate_actions(corporate_actions)
 
     if transactions.empty:
-        empty = pd.DataFrame()
+        return _empty_result()
 
-        return PortfolioResult(
-            history=empty,
-            positions=empty,
-            ledger=empty,
-        )
+    if history_loader is None:
+        raise ValueError("Informe uma função history_loader.")
 
-    transactions = transactions.copy()
-    income_events = income_events.copy()
+    tickers = set(transactions["ticker"].unique())
 
-    transactions["date"] = (
-        pd.to_datetime(transactions["date"])
-        .dt.normalize()
-    )
+    if not income_events.empty:
+        tickers.update(income_events["ticker"].unique())
 
-    for column in ["position_date", "payment_date"]:
-        if not income_events.empty:
-            income_events[column] = (
-                pd.to_datetime(income_events[column])
-                .dt.normalize()
-            )
+    if not corporate_actions.empty:
+        tickers.update(corporate_actions["source_ticker"].unique())
+        tickers.update(corporate_actions["target_ticker"].unique())
 
-    final_date = pd.Timestamp(
-        final_date or date.today()
-    ).normalize()
-
-    tickers = sorted(
-        set(transactions["ticker"])
-        | set(income_events["ticker"])
-    )
+    tickers = sorted(tickers)
 
     histories = {
-        ticker: prepare_history(
-            history_loader(ticker)
-        )
+        ticker: _prepare_history(history_loader(ticker), ticker)
         for ticker in tickers
     }
 
-    for ticker, history in histories.items():
-        if history.empty:
-            raise ValueError(
-                f"Não existe histórico para {ticker}."
-            )
+    empty_tickers = [
+        ticker
+        for ticker, history in histories.items()
+        if history.empty
+    ]
 
-    if not income_events.empty:
-        income_events["ex_date"] = income_events.apply(
-            lambda event: find_ex_date(
-                histories[event["ticker"]],
-                event["position_date"],
-            ),
-            axis=1,
-        )
+    if empty_tickers:
+        raise ValueError(f"Sem histórico para: {', '.join(empty_tickers)}")
 
-    first_date = transactions["date"].min()
-
-    calendar_dates = set(
-        transactions["date"]
+    histories = _adjust_histories_for_corporate_actions(
+        histories,
+        corporate_actions,
     )
 
-    for history in histories.values():
-        dates = history[
-            history["date"].between(
-                first_date,
-                final_date,
-            )
-        ]["date"]
+    first_date = transactions["date"].min()
+    end = pd.Timestamp(final_date or date.today()).normalize()
 
-        calendar_dates.update(dates)
+    if end < first_date:
+        raise ValueError("A data final é anterior ao primeiro lançamento.")
+
+    income_events = income_events.copy()
 
     if not income_events.empty:
+        ex_dates = []
+
+        for _, income in income_events.iterrows():
+            ticker = income["ticker"]
+            position_date = income["position_date"]
+            ex_date = _first_market_date_on_or_after(
+                histories[ticker],
+                position_date,
+            )
+            ex_dates.append(ex_date)
+
+        income_events["ex_date"] = ex_dates
+    else:
+        income_events["ex_date"] = pd.Series(dtype="datetime64[ns]")
+
+    calendar_dates = set(transactions["date"])
+
+    for history in histories.values():
         calendar_dates.update(
-            income_events[
-                income_events["payment_date"] <= final_date
-            ]["payment_date"]
+            history.loc[
+                history["date"].between(first_date, end),
+                "date",
+            ]
         )
 
-        calendar_dates.update(
-            income_events[
-                income_events["ex_date"].notna()
-                & (income_events["ex_date"] <= final_date)
-            ]["ex_date"]
-        )
+    if not income_events.empty:
+        calendar_dates.update(income_events["ex_date"])
+        calendar_dates.update(income_events["payment_date"])
 
-    calendar_dates = sorted(calendar_dates)
+    if not corporate_actions.empty:
+        calendar_dates.update(corporate_actions["ex_date"])
+        calendar_dates.update(corporate_actions["credit_date"])
 
-    history_indexes = {
+    all_dates = sorted(
+        current_date
+        for current_date in calendar_dates
+        if first_date <= current_date <= end
+    )
+
+    positions = {ticker: 0.0 for ticker in tickers}
+    last_prices: dict[str, float] = {}
+
+    cash = 0.0
+    receivables = 0.0
+    quota_count = 0.0
+
+    external_money_total = 0.0
+    income_received_total = 0.0
+
+    history_rows: list[dict] = []
+    ledger_rows: list[dict] = []
+
+    histories_by_date = {
         ticker: history.set_index("date")
         for ticker, history in histories.items()
     }
 
-    positions = {
-        ticker: 0.0
-        for ticker in tickers
-    }
+    for current_date in all_dates:
+        for ticker, history in histories_by_date.items():
+            if current_date not in history.index:
+                continue
 
-    last_prices = {}
+            market_row = history.loc[current_date]
 
-    cash = 0.0
-    receivables = 0.0
+            if isinstance(market_row, pd.DataFrame):
+                market_row = market_row.iloc[-1]
 
-    quota_count = 0.0
-    total_external_money = 0.0
-
-    receivables_by_event = {}
-
-    history_rows = []
-    ledger_rows = []
-
-    transactions = transactions.sort_values(
-        ["date", "created_at", "id"]
-    )
-
-    for current_date in calendar_dates:
-        if current_date > final_date:
-            break
-
-        # Atualiza os preços de fechamento.
-        for ticker, history in history_indexes.items():
-            if current_date in history.index:
-                last_prices[ticker] = float(
-                    history.loc[current_date, "close"]
-                )
-
-        # Reconhece o provento como valor a receber na data ex.
-        if not income_events.empty:
-            entitlement_events = income_events[
-                income_events["ex_date"] == current_date
-            ]
-
-            for _, event in entitlement_events.iterrows():
-                value = float(event["net_amount"])
-
-                receivables += value
-                receivables_by_event[event["id"]] = value
-
-                ledger_rows.append(
-                    {
-                        "date": current_date,
-                        "event": "provento a receber",
-                        "ticker": event["ticker"],
-                        "value": value,
-                        "external_flow": 0.0,
-                    }
-                )
-
-        # Na data do pagamento, transforma o recebível em caixa.
-        if not income_events.empty:
-            payment_events = income_events[
-                income_events["payment_date"]
-                == current_date
-            ]
-
-            for _, event in payment_events.iterrows():
-                value = receivables_by_event.pop(
-                    event["id"],
-                    0.0,
-                )
-
-                receivables -= value
-                cash += value
-
-                ledger_rows.append(
-                    {
-                        "date": current_date,
-                        "event": "provento pago",
-                        "ticker": event["ticker"],
-                        "value": value,
-                        "external_flow": 0.0,
-                    }
-                )
+            last_prices[ticker] = float(market_row["close"])
 
         daily_external_flow = 0.0
+        daily_income_received = 0.0
 
-        daily_transactions = transactions[
+        day_corporate_actions = corporate_actions[
+            corporate_actions["credit_date"] == current_date
+        ]
+
+        for _, action in day_corporate_actions.iterrows():
+            action_type = action["action_type"]
+            source_ticker = action["source_ticker"]
+            target_ticker = action["target_ticker"]
+            factor = float(action["factor"])
+            cash_amount = float(action["cash_amount"])
+
+            source_quantity = positions.get(source_ticker, 0.0)
+
+            if source_quantity <= EPSILON:
+                continue
+
+            if action_type in {
+                "bonificação",
+                "desdobramento",
+                "grupamento",
+            }:
+                new_quantity = source_quantity * factor
+                quantity_delta = new_quantity - source_quantity
+
+                positions[source_ticker] = new_quantity
+                cash += cash_amount
+
+                ledger_rows.append(
+                    {
+                        "date": current_date,
+                        "event": action_type,
+                        "ticker": source_ticker,
+                        "gross_value": cash_amount,
+                        "internal_cash_used": 0.0,
+                        "external_flow": 0.0,
+                        "cash_after": cash,
+                        "quantity_delta": quantity_delta,
+                        "corporate_action_id": action["id"],
+                    }
+                )
+
+            elif action_type in {"mudança de ticker", "conversão"}:
+                new_quantity = source_quantity * factor
+
+                positions[source_ticker] = 0.0
+                positions[target_ticker] = (
+                    positions.get(target_ticker, 0.0)
+                    + new_quantity
+                )
+                cash += cash_amount
+
+                ledger_rows.append(
+                    {
+                        "date": current_date,
+                        "event": action_type,
+                        "ticker": f"{source_ticker}->{target_ticker}",
+                        "gross_value": cash_amount,
+                        "internal_cash_used": 0.0,
+                        "external_flow": 0.0,
+                        "cash_after": cash,
+                        "quantity_delta": new_quantity,
+                        "corporate_action_id": action["id"],
+                    }
+                )
+
+        day_income_rights = income_events[
+            income_events["ex_date"] == current_date
+        ]
+
+        for _, income in day_income_rights.iterrows():
+            amount = float(income["net_amount"])
+            receivables += amount
+
+            ledger_rows.append(
+                {
+                    "date": current_date,
+                    "event": "provento a receber",
+                    "ticker": income["ticker"],
+                    "gross_value": amount,
+                    "internal_cash_used": 0.0,
+                    "external_flow": 0.0,
+                    "cash_after": cash,
+                    "receivables_after": receivables,
+                    "income_event_id": income["id"],
+                }
+            )
+
+        day_income_payments = income_events[
+            income_events["payment_date"] == current_date
+        ]
+
+        for _, income in day_income_payments.iterrows():
+            amount = float(income["net_amount"])
+
+            receivables -= amount
+
+            if abs(receivables) < EPSILON:
+                receivables = 0.0
+
+            cash += amount
+            daily_income_received += amount
+            income_received_total += amount
+
+            ledger_rows.append(
+                {
+                    "date": current_date,
+                    "event": "provento pago",
+                    "ticker": income["ticker"],
+                    "gross_value": amount,
+                    "internal_cash_used": 0.0,
+                    "external_flow": 0.0,
+                    "cash_after": cash,
+                    "receivables_after": receivables,
+                    "income_event_id": income["id"],
+                }
+            )
+
+        day_transactions = transactions[
             transactions["date"] == current_date
         ]
 
-        for _, transaction in daily_transactions.iterrows():
+        for _, transaction in day_transactions.iterrows():
             ticker = transaction["ticker"]
+            transaction_type = transaction["type"]
             quantity = float(transaction["quantity"])
             unit_price = float(transaction["unit_price"])
             costs = float(transaction["costs"])
 
-            last_prices.setdefault(
-                ticker,
-                unit_price,
-            )
+            last_prices.setdefault(ticker, unit_price)
 
-            if transaction["type"] == "venda":
+            if transaction_type == "venda":
                 if quantity > positions[ticker] + EPSILON:
                     raise ValueError(
-                        f"Venda de {quantity:g} {ticker} "
-                        f"excede a posição de "
+                        f"Venda de {quantity:g} {ticker} em "
+                        f"{current_date.date()} excede a posição de "
                         f"{positions[ticker]:g}."
                     )
 
-                sale_value = (
-                    quantity * unit_price
-                    - costs
-                )
+                proceeds = quantity * unit_price - costs
+
+                if proceeds < -EPSILON:
+                    raise ValueError("Custos da venda excedem o valor vendido.")
 
                 positions[ticker] -= quantity
-                cash += sale_value
+                cash += proceeds
 
                 ledger_rows.append(
                     {
                         "date": current_date,
                         "event": "venda",
                         "ticker": ticker,
-                        "value": sale_value,
+                        "gross_value": proceeds,
+                        "internal_cash_used": 0.0,
                         "external_flow": 0.0,
+                        "cash_after": cash,
+                        "transaction_id": transaction["id"],
                     }
                 )
 
                 continue
 
-            purchase_value = (
-                quantity * unit_price
-                + costs
-            )
-
-            internal_cash_used = min(
-                cash,
-                purchase_value,
-            )
-
-            external_flow = (
-                purchase_value
-                - internal_cash_used
-            )
+            purchase_total = quantity * unit_price + costs
+            internal_cash_used = min(cash, purchase_total)
+            external_flow = purchase_total - internal_cash_used
 
             if external_flow > EPSILON:
-                assets_before_flow = sum(
-                    positions[position_ticker]
-                    * last_prices.get(
-                        position_ticker,
-                        0.0,
-                    )
-                    for position_ticker in positions
+                marked_assets_before_flow = sum(
+                    position * last_prices.get(position_ticker, 0.0)
+                    for position_ticker, position in positions.items()
                 )
-
                 equity_before_flow = (
-                    assets_before_flow
-                    + cash
+                    marked_assets_before_flow
                     + receivables
+                    + cash
                 )
 
-                if quota_count > EPSILON:
-                    quota_value_before_flow = (
-                            equity_before_flow
-                            / quota_count
-                    )
+                quota_value_before_flow = (
+                    equity_before_flow / quota_count
+                    if quota_count > EPSILON
+                    else INITIAL_QUOTA_VALUE
+                )
 
-                    new_quotas = (
-                            external_flow
-                            / quota_value_before_flow
-                    )
-
-                    quota_count += new_quotas
-
+                quota_count += external_flow / quota_value_before_flow
+                external_money_total += external_flow
+                daily_external_flow += external_flow
                 cash += external_flow
 
-                total_external_money += external_flow
-                daily_external_flow += external_flow
-
-            cash -= purchase_value
-            positions[ticker] += quantity
+            cash -= purchase_total
 
             if abs(cash) < EPSILON:
                 cash = 0.0
+
+            positions[ticker] += quantity
 
             ledger_rows.append(
                 {
                     "date": current_date,
                     "event": "compra",
                     "ticker": ticker,
-                    "value": purchase_value,
-                    "internal_cash_used": (
-                        internal_cash_used
-                    ),
+                    "gross_value": purchase_total,
+                    "internal_cash_used": internal_cash_used,
                     "external_flow": external_flow,
+                    "cash_after": cash,
+                    "transaction_id": transaction["id"],
                 }
             )
 
-        assets = sum(
-            positions[ticker]
-            * last_prices.get(ticker, 0.0)
-            for ticker in positions
+        marked_assets = sum(
+            position * last_prices.get(ticker, 0.0)
+            for ticker, position in positions.items()
         )
 
-        equity = (
-            assets
-            + cash
-            + receivables
+        equity = marked_assets + receivables + cash
+
+        quota_value = (
+            equity / quota_count
+            if quota_count > EPSILON
+            else INITIAL_QUOTA_VALUE
         )
-
-        if (
-                quota_count <= EPSILON
-                and equity > EPSILON
-        ):
-            quota_count = (
-                    equity / INITIAL_QUOTA_VALUE
-            )
-
-        if quota_count > EPSILON:
-            quota_value = (
-                    equity / quota_count
-            )
-        else:
-            quota_value = INITIAL_QUOTA_VALUE
 
         history_rows.append(
             {
                 "date": current_date,
-                "assets": assets,
+                "assets": marked_assets,
                 "receivables": receivables,
                 "cash": cash,
                 "equity": equity,
                 "quota_count": quota_count,
                 "quota_value": quota_value,
-                "return": (
-                    quota_value
-                    / INITIAL_QUOTA_VALUE
-                    - 1
-                ),
+                "return": quota_value / INITIAL_QUOTA_VALUE - 1.0,
                 "external_flow": daily_external_flow,
-                "external_money_total": (
-                    total_external_money
-                ),
+                "external_money_total": external_money_total,
+                "new_money_total": external_money_total,
+                "income_received": daily_income_received,
+                "income_received_total": income_received_total,
             }
         )
 
@@ -418,14 +642,18 @@ def calculate_portfolio(
         if quantity <= EPSILON:
             continue
 
-        price = last_prices.get(ticker, 0.0)
+        price = last_prices.get(ticker)
 
         position_rows.append(
             {
                 "ticker": ticker,
                 "quantity": quantity,
                 "last_price": price,
-                "market_value": quantity * price,
+                "market_value": (
+                    quantity * price
+                    if price is not None
+                    else None
+                ),
             }
         )
 
@@ -433,11 +661,4 @@ def calculate_portfolio(
         history=pd.DataFrame(history_rows),
         positions=pd.DataFrame(position_rows),
         ledger=pd.DataFrame(ledger_rows),
-    )
-
-
-def calculate_saved_portfolio() -> PortfolioResult:
-    return calculate_portfolio(
-        transactions=load_transactions(),
-        income_events=load_income_events(),
     )
