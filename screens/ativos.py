@@ -1,7 +1,10 @@
 import streamlit as st
+from common.common import attempt, get_store
 
 
-def page_ativos():
+def page_ativos(uid):
+    store = get_store()
+    
     st.subheader("Cadastrar ativo")
     st.caption(
         "Primeira versão: valores e cotações em BRL. Use o mesmo identificador nos arquivos importados."

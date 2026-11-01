@@ -1,11 +1,12 @@
 import sqlite3
 import streamlit as st
-from core import Store
+
+from common.common import get_store
 
 
-def first_access_screen(store: Store):
-    # st.write("Versão da função: 1")
-
+def first_access_screen():
+    store = get_store()
+    
     if store.rows("SELECT id FROM users LIMIT 1"):
         return
 

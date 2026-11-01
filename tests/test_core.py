@@ -1,9 +1,10 @@
 import tempfile
 import unittest
+
 from datetime import date
 from decimal import Decimal as D
 from pathlib import Path
-from core import Store, history, replay
+from common.core import Store, history, replay
 
 class CoreTests(unittest.TestCase):
     def setUp(self):

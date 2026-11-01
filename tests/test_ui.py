@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from streamlit.testing.v1 import AppTest
-from core import Store
+from common.core import Store
 
 class UITests(unittest.TestCase):
     def test_setup_login_and_pages(self):

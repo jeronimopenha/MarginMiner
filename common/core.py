@@ -15,6 +15,8 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+from common.constants import categories, allowed
+
 D = Decimal
 
 TYPES = (
@@ -108,7 +110,8 @@ class Store:
         self.path = Path(
             path
             or os.environ.get(
-                "CARTEIRA_DB", Path(__file__).parent / "data" / "carteira.sqlite3"
+                "CARTEIRA_DB",
+                Path(__file__).parent.parent / "data" / "carteira.sqlite3",
             )
         )
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -174,11 +177,129 @@ class Store:
                 (uid, ticker, name.strip(), category),
             )
 
+    def assets_for_edit(self, uid, category):
+        return self.rows(
+            """
+            SELECT id, ticker, name, category
+            FROM assets
+            WHERE user_id = ? AND category = ?
+            ORDER BY ticker
+            """,
+            (uid, category),
+        )
+
+    def save_assets_grid(self, uid, category, original, edited):
+        if category not in categories:
+            raise ValueError("Categoria inválida.")
+
+        original_by_id = {row["id"]: row for row in original}
+        records = []
+        seen_ids = set()
+        seen_tickers = set()
+
+        for row in edited:
+            asset_id = row["id"]
+            ticker = str(row["ticker"] or "").strip().upper()
+            name = str(row["name"] or "").strip()
+
+            # Ignora uma linha nova completamente vazia.
+            if asset_id is None and not ticker and not name:
+                continue
+
+            if not ticker or not name:
+                raise ValueError("Preencha ticker e nome para salvar.")
+
+            if ticker in seen_tickers:
+                raise ValueError(f"Ticker repetido: {ticker}.")
+
+            seen_tickers.add(ticker)
+
+            if asset_id is not None:
+                asset_id = int(asset_id)
+
+                if asset_id not in original_by_id:
+                    raise ValueError("Identificador de ativo inválido.")
+
+                if asset_id in seen_ids:
+                    raise ValueError("Identificador de ativo repetido.")
+
+                seen_ids.add(asset_id)
+
+                if ticker != original_by_id[asset_id]["ticker"]:
+                    raise ValueError(
+                        "O ticker de um ativo existente não pode "
+                        "ser alterado nesta etapa."
+                    )
+
+            records.append((asset_id, ticker, name))
+
+        try:
+            with self.connect() as c:
+                current = [
+                    dict(row)
+                    for row in c.execute(
+                        """
+                        SELECT id, ticker, name, category
+                        FROM assets
+                        WHERE user_id = ? AND category = ?
+                        ORDER BY ticker
+                        """,
+                        (uid, category),
+                    )
+                ]
+
+                if current != original:
+                    raise ValueError(
+                        "Esta categoria foi alterada em outra sessão. "
+                        "Recarregue a grade antes de continuar."
+                    )
+
+                for asset_id in original_by_id.keys() - seen_ids:
+                    c.execute(
+                        """
+                        DELETE FROM assets
+                        WHERE user_id = ?
+                        AND category = ?
+                        AND id = ?
+                        """,
+                        (uid, category, asset_id),
+                    )
+
+                for asset_id, ticker, name in records:
+                    if asset_id is None:
+                        c.execute(
+                            """
+                            INSERT INTO assets (
+                                user_id, ticker, name, category
+                            )
+                            VALUES (?, ?, ?, ?)
+                            """,
+                            (uid, ticker, name, category),
+                        )
+                    else:
+                        c.execute(
+                            """
+                            UPDATE assets
+                            SET name = ?
+                            WHERE user_id = ?
+                            AND category = ?
+                            AND id = ?
+                            """,
+                            (name, uid, category, asset_id),
+                        )
+
+        except sqlite3.IntegrityError as exc:
+            raise ValueError(
+                "Não foi possível salvar. O ticker pode já estar "
+                "cadastrado em outra linha ou categoria, ou você "
+                "tentou excluir um ativo com lançamentos ou cotações."
+            ) from exc
+
     def movements(self, uid):
         sql_str = "SELECT " + ",".join(
             FIELDS
         ) + " FROM movements WHERE user_id=? ORDER BY data,ordem,id", (uid,)
-        print(sql_str)
+
         return_ = self.rows(
             "SELECT "
             + ",".join(FIELDS)
@@ -192,6 +313,106 @@ class Store:
             "SELECT ticker,date,close FROM quotes WHERE user_id=? ORDER BY date,ticker",
             (uid,),
         )
+
+    def update_movements_grid(self, uid, kind, original, edited):
+        if kind not in TYPES:
+            raise ValueError("Tipo inválido.")
+
+        original_ids = {r["id"] for r in original}
+        edited_ids = [r.get("id") for r in edited]
+
+        if len(edited_ids) != len(set(edited_ids)) or set(edited_ids) != original_ids:
+            raise ValueError("Esta grade permite apenas editar lançamentos existentes.")
+
+        normalized = []
+
+        for row in edited:
+            if row.get("tipo") != kind:
+                raise ValueError("Não é permitido alterar o tipo pela grade.")
+
+            normalized.append(normalize(row))
+
+        try:
+            with self.connect() as c:
+                # Reserva a escrita antes de conferir o estado atual.
+                c.execute("BEGIN IMMEDIATE")
+
+                current = [
+                    dict(row)
+                    for row in c.execute(
+                        f"""
+                        SELECT {",".join(FIELDS)}
+                        FROM movements
+                        WHERE user_id = ? AND tipo = ?
+                        ORDER BY data, ordem, id
+                        """,
+                        (uid, kind),
+                    )
+                ]
+
+                if current != original:
+                    raise ValueError(
+                        "Os lançamentos deste tipo foram alterados. "
+                        "Recarregue a grade antes de continuar."
+                    )
+
+                # Ordens temporárias evitam conflitos durante a troca
+                # de ordem entre dois lançamentos.
+                max_order = c.execute(
+                    """
+                    SELECT COALESCE(MAX(ordem), 0)
+                    FROM movements
+                    WHERE user_id = ?
+                    """,
+                    (uid,),
+                ).fetchone()[0]
+
+                temporary_base = max([max_order] + [r["ordem"] for r in normalized])
+
+                for offset, row in enumerate(normalized, start=1):
+                    c.execute(
+                        """
+                        UPDATE movements
+                        SET ordem = ?
+                        WHERE user_id = ? AND id = ?
+                        """,
+                        (temporary_base + offset, uid, row["id"]),
+                    )
+
+                editable_fields = [field for field in FIELDS if field != "id"]
+
+                assignments = ", ".join(f"{field} = ?" for field in editable_fields)
+
+                for row in normalized:
+                    c.execute(
+                        f"""
+                        UPDATE movements
+                        SET {assignments}
+                        WHERE user_id = ? AND id = ?
+                        """,
+                        [row[field] for field in editable_fields] + [uid, row["id"]],
+                    )
+
+                all_rows = [
+                    dict(row)
+                    for row in c.execute(
+                        f"""
+                        SELECT {",".join(FIELDS)}
+                        FROM movements
+                        WHERE user_id = ?
+                        ORDER BY data, ordem, id
+                        """,
+                        (uid,),
+                    )
+                ]
+
+                replay(all_rows)
+
+        except sqlite3.IntegrityError as exc:
+            raise ValueError(
+                "Não foi possível salvar. Confira o ativo e se "
+                "existe ordem repetida na mesma data."
+            ) from exc
 
     def save_movements(self, uid, raw):
         normalized = [normalize(x) for x in raw]
@@ -339,19 +560,29 @@ def normalize(raw):
         raise ValueError("Tipo não implementado. Incorporações ainda não são aceitas.")
     r["ticker"] = str(r["ticker"] or "").strip().upper() or None
     r["observacao"] = str(r["observacao"] or "")
-    for key in ("quantidade", "preco", "valor_bruto", "valor_liquido", "taxas", "fator"):
+    for key in (
+        "quantidade",
+        "preco",
+        "valor_bruto",
+        "valor_liquido",
+        "taxas",
+        "fator",
+    ):
         r[key] = str(number(r[key] or ("1" if key == "fator" else "0")))
         if D(r[key]) < 0:
             raise ValueError("Use valores não negativos; o tipo determina o sinal.")
     t = r["tipo"]
     if t in ("APORTE", "RETIRADA", "TAXA"):
-        if D(r["valor_bruto"]) <= 0 or D(r["valor_liquido"]) <= 0 or r["ticker"]:
+        if D(r["valor_liquido"]) <= 0 or r["ticker"]:
             raise ValueError("Movimento de caixa exige valor positivo e nenhum ativo.")
     elif not r["ticker"]:
         raise ValueError("Selecione um ativo.")
     if t in ("COMPRA", "VENDA") and (D(r["quantidade"]) <= 0 or D(r["preco"]) <= 0):
         raise ValueError("Compra/venda exige quantidade e preço positivos.")
-    if t in ("DIVIDENDO", "JCP", "AMORTIZACAO", "LIQUIDACAO") and D(r["valor"]) <= 0:
+    if (
+        t in ("DIVIDENDO", "JCP", "AMORTIZACAO", "LIQUIDACAO")
+        and D(r["valor_liquido"]) <= 0
+    ):
         raise ValueError("Informe o valor total líquido recebido.")
     if t == "BONIFICACAO" and D(r["quantidade"]) <= 0:
         raise ValueError("Informe a quantidade adicional recebida.")
@@ -359,23 +590,40 @@ def normalize(raw):
         raise ValueError("Desdobramento exige fator > 1. Ex.: 2 para 1:2.")
     if t == "GRUPAMENTO" and not 0 < D(r["fator"]) < 1:
         raise ValueError("Grupamento exige fator entre 0 e 1. Ex.: 0,1 para 10:1.")
-    allowed = {
-        "COMPRA": {"quantidade", "preco", "taxas"},
-        "VENDA": {"quantidade", "preco", "taxas"},
-        "BONIFICACAO": {"quantidade"},
-        "DESDOBRAMENTO": {"fator"},
-        "GRUPAMENTO": {"fator"},
-    }.get(t, {"valor"})
-    for k in ("quantidade", "preco", "valor_bruto", "valor_liquido", "taxas", "fator"):
-        if k not in allowed and D(r[k]) != (1 if k == "fator" else 0):
+    if t == "JCP":
+        if D(r["valor_bruto"]) < D(r["valor_liquido"]):
+            raise ValueError("O valor bruto do JCP não pode ser menor que o líquido.")
+    permitted = allowed[t]
+
+    permitted = allowed[t]
+
+    for k in (
+        "quantidade",
+        "preco",
+        "valor_bruto",
+        "valor_liquido",
+        "taxas",
+        "fator",
+    ):
+        default = D("1") if k == "fator" else D("0")
+
+        if k not in permitted and D(r[k]) != default:
             raise ValueError(f"O campo {k} não se aplica a {t}.")
     return r
 
 
 def apply(r, cash, positions):
     t, a = r["tipo"], r["ticker"]
+
     q, p, v, fee, factor = (
-        D(r[k]) for k in ("quantidade", "preco", "valor_bruto", "valor_liquido", "taxas", "fator")
+        D(r[k])
+        for k in (
+            "quantidade",
+            "preco",
+            "valor_liquido",
+            "taxas",
+            "fator",
+        )
     )
     held = positions.get(a, D(0))
     if t == "APORTE":
@@ -446,7 +694,7 @@ def history(rows, quotes, end=None):
         daily = sorted(byday.get(ds, []), key=lambda x: (int(x["ordem"]), x["id"]))
         flow = sum(
             (
-                D(r["valor"]) * (1 if r["tipo"] == "APORTE" else -1)
+                D(r["valor_liquido"]) * (1 if r["tipo"] == "APORTE" else -1)
                 for r in daily
                 if r["tipo"] in ("APORTE", "RETIRADA")
             ),

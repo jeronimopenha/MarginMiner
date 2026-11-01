@@ -1,7 +1,5 @@
-"""Crie usuários adicionais no terminal, sem cadastro público."""
-
 from getpass import getpass
-from core import Store
+from common.common import get_store
 
 if __name__ == "__main__":
     login = input("Login: ")
@@ -9,5 +7,6 @@ if __name__ == "__main__":
     password = getpass("Senha: ")
     if password != getpass("Repita a senha: "):
         raise SystemExit("Senhas diferentes.")
-    Store().create_user(login, name, password)
+    store = get_store()
+    store.create_user(login, name, password)
     print("Usuário criado.")
