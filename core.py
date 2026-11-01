@@ -40,7 +40,8 @@ FIELDS = [
     "ticker",
     "quantidade",
     "preco",
-    "valor",
+    "valor_bruto",
+    "valor_liquido",
     "taxas",
     "fator",
     "observacao",
@@ -174,12 +175,17 @@ class Store:
             )
 
     def movements(self, uid):
-        return self.rows(
+        sql_str = "SELECT " + ",".join(
+            FIELDS
+        ) + " FROM movements WHERE user_id=? ORDER BY data,ordem,id", (uid,)
+        print(sql_str)
+        return_ = self.rows(
             "SELECT "
             + ",".join(FIELDS)
             + " FROM movements WHERE user_id=? ORDER BY data,ordem,id",
             (uid,),
         )
+        return return_
 
     def quotes(self, uid):
         return self.rows(
@@ -333,13 +339,13 @@ def normalize(raw):
         raise ValueError("Tipo não implementado. Incorporações ainda não são aceitas.")
     r["ticker"] = str(r["ticker"] or "").strip().upper() or None
     r["observacao"] = str(r["observacao"] or "")
-    for key in ("quantidade", "preco", "valor", "taxas", "fator"):
+    for key in ("quantidade", "preco", "valor_bruto", "valor_liquido", "taxas", "fator"):
         r[key] = str(number(r[key] or ("1" if key == "fator" else "0")))
         if D(r[key]) < 0:
             raise ValueError("Use valores não negativos; o tipo determina o sinal.")
     t = r["tipo"]
     if t in ("APORTE", "RETIRADA", "TAXA"):
-        if D(r["valor"]) <= 0 or r["ticker"]:
+        if D(r["valor_bruto"]) <= 0 or D(r["valor_liquido"]) <= 0 or r["ticker"]:
             raise ValueError("Movimento de caixa exige valor positivo e nenhum ativo.")
     elif not r["ticker"]:
         raise ValueError("Selecione um ativo.")
@@ -360,7 +366,7 @@ def normalize(raw):
         "DESDOBRAMENTO": {"fator"},
         "GRUPAMENTO": {"fator"},
     }.get(t, {"valor"})
-    for k in ("quantidade", "preco", "valor", "taxas", "fator"):
+    for k in ("quantidade", "preco", "valor_bruto", "valor_liquido", "taxas", "fator"):
         if k not in allowed and D(r[k]) != (1 if k == "fator" else 0):
             raise ValueError(f"O campo {k} não se aplica a {t}.")
     return r
@@ -369,7 +375,7 @@ def normalize(raw):
 def apply(r, cash, positions):
     t, a = r["tipo"], r["ticker"]
     q, p, v, fee, factor = (
-        D(r[k]) for k in ("quantidade", "preco", "valor", "taxas", "fator")
+        D(r[k]) for k in ("quantidade", "preco", "valor_bruto", "valor_liquido", "taxas", "fator")
     )
     held = positions.get(a, D(0))
     if t == "APORTE":

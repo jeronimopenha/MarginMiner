@@ -6,17 +6,18 @@
       "type": "debugpy",
       "request": "launch",
       "module": "streamlit",
+      "cwd": "${workspaceFolder}",
       "args": [
         "run",
         "${workspaceFolder}/app.py",
         "--server.headless=true",
         "--server.port=8501",
         "--server.runOnSave=true",
-        "--server.fileWatcherType=auto"
+        "--server.fileWatcherType=poll"
       ],
       "console": "integratedTerminal",
       "justMyCode": true,
-      "subProcess": true
+      "subProcess": true,
     }
   ]
 }
