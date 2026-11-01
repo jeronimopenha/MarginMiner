@@ -1,0 +1,3 @@
+﻿id;data;ordem;tipo;ticker;quantidade;preco;valor;taxas;fator;observacao
+exemplo-aporte;2024-01-02;1;APORTE;;0;0;1000;0;1;Exemplo sintético
+exemplo-compra;2024-01-02;2;COMPRA;TEST3;10;50;0;0;1;Cadastre antes o ativo fictício TEST3
