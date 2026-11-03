@@ -8,23 +8,51 @@ from common.common import attempt, get_store
 from common.constants import allowed
 
 
-def movements_ascreen():
+def movements_screen():
     store = get_store()
-
     uid = st.session_state.user["id"]
-    assets = store.assets(uid)
-    tickers = [a["ticker"] for a in assets]
-    rows = store.movements(uid)
 
-    st.subheader("Novo lançamento")
+    assets = st.session_state.user["assets"]
+    tickers =st.session_state.user["tickers"]
+    rows = st.session_state.user["rows"]
+
+    st.subheader("Movimentações")
     st.info(
-        "Cadastre os aportes antes das compras. Valor recebido é o total líquido, não por ação. Ordem define a sequência dentro do dia."
+        "Aportes acrescentam dinheiro à carteira. "
+        "Compras utilizam o saldo disponível. "
+        "Proventos são registrados pelo total recebido."
     )
-    kind = st.selectbox("Tipo", TYPES)
+
+    message_key = f"movement_message_{uid}"
+
+    if message := st.session_state.pop(message_key, None):
+        st.success(message)
+
+    tabs = st.tabs(list(TYPES))
+
+    for kind, tab in zip(TYPES, tabs):
+        with tab:
+            movement_tab(store, uid, kind, tickers)
+
+
+def movement_tab(store, uid, kind, tickers):
+    rows = store.movements(uid)
+    prefix = f"movement_{uid}_{kind}"
+
+    def persist(action, message):
+        try:
+            action()
+        except (ValueError, KeyError, TypeError, sqlite3.Error) as exc:
+            st.error(str(exc))
+        else:
+            # Atualiza a grade deste tipo após incluir ou excluir.
+            st.session_state.pop(f"movements_grid_{uid}_{kind}", None)
+
+            st.session_state[f"movement_message_{uid}"] = message
+            st.rerun()
 
     fields = allowed[kind]
 
-    # Começa sempre com os defaults dos campos não utilizados.
     values = {
         "quantidade": "0",
         "preco": "0",
@@ -43,12 +71,13 @@ def movements_ascreen():
         "fator": "Fator de alteração da quantidade",
     }
 
-    # Um formulário diferente por tipo evita reaproveitar
-    # acidentalmente valores digitados em outra operação.
-    with st.form(f"movement_{uid}_{kind}", clear_on_submit=True):
+    st.markdown("**Novo lançamento**")
+
+    with st.form(prefix, clear_on_submit=True):
         day = st.date_input(
             "Data",
             max_value=date.today(),
+            key=f"{prefix}_data",
         )
 
         order = st.number_input(
@@ -56,6 +85,7 @@ def movements_ascreen():
             min_value=1,
             value=max([r["ordem"] for r in rows] + [0]) + 1,
             step=1,
+            key=f"{prefix}_ordem",
         )
 
         ticker = ""
@@ -64,6 +94,7 @@ def movements_ascreen():
             ticker = st.selectbox(
                 "Ativo",
                 [""] + tickers,
+                key=f"{prefix}_ticker",
             )
 
         for field, default in values.items():
@@ -71,6 +102,7 @@ def movements_ascreen():
                 values[field] = st.text_input(
                     labels[field],
                     value=default,
+                    key=f"{prefix}_{field}",
                 )
 
         if kind == "BONIFICACAO":
@@ -80,63 +112,85 @@ def movements_ascreen():
             st.caption("Exemplo: fator 2 dobra a quantidade.")
 
         elif kind == "GRUPAMENTO":
-            st.caption(
-                "Exemplo: fator 0,1 transforma 10 unidades em 1."
-            )
+            st.caption("Exemplo: fator 0,1 transforma 10 unidades em 1.")
 
-        note = st.text_input("Observação")
+        elif kind == "LIQUIDACAO":
+            st.caption("Encerra toda a posição e credita o total recebido.")
+
+        elif kind == "AMORTIZACAO":
+            st.caption("Credita caixa sem alterar a quantidade.")
+
+        note = st.text_input(
+            "Observação",
+            key=f"{prefix}_observacao",
+        )
 
         if st.form_submit_button("Salvar lançamento"):
-            attempt(
-                lambda: store.save_movements(
-                    uid,
-                    [
-                        {
-                            "data": day.isoformat(),
-                            "ordem": int(order),
-                            "tipo": kind,
-                            "ticker": ticker,
-                            **values,
-                            "observacao": note,
-                        }
-                    ],
-                )
+            movement = {
+                "data": day.isoformat(),
+                "ordem": int(order),
+                "tipo": kind,
+                "ticker": ticker,
+                **values,
+                "observacao": note,
+            }
+
+            persist(
+                lambda: store.save_movements(uid, [movement]),
+                "Lançamento cadastrado.",
             )
-    st.caption(
-        "Liquidação: encerra toda a posição e credita o valor total recebido. Amortização: credita caixa sem alterar a quantidade. Bonificação não calcula custo fiscal nesta versão."
-    )
-    rows = store.movements(uid)
-    movements_grid(store, uid, kind, tickers)
-    if rows:
-        with st.expander("Excluir um lançamento para corrigir"):
-            mid = st.selectbox(
-                "Lançamento",
-                [r["id"] for r in rows],
-                format_func=lambda mid: next(
-                    f"{r['data']} · {r['tipo']} · {r['ticker'] or 'Caixa'} · {r['id'][:8]}"
-                    for r in rows
-                    if r["id"] == mid
-                ),
-            )
-            confirm = st.checkbox("Confirmo a exclusão")
-            if st.button("Excluir", disabled=not confirm):
-                attempt(lambda: store.delete(uid, mid))
-                st.caption(
-                    "Se a exclusão invalidar lançamentos posteriores, ela será rejeitada. Recarregue a página para atualizar a lista."
+
+    movements_grid(uid, kind, tickers)
+
+    # A exclusão oferece somente os registros desta aba.
+    type_rows = [r for r in rows if r["tipo"] == kind]
+
+    if type_rows:
+        with st.expander("Excluir lançamento"):
+            rows_by_id = {r["id"]: r for r in type_rows}
+
+            def describe(mid):
+                row = rows_by_id[mid]
+                return (
+                    f"{row['data']} · "
+                    f"{row['ticker'] or 'Caixa'} · "
+                    f"ordem {row['ordem']} · "
+                    f"{mid[:8]}"
                 )
 
-def movements_grid(store, uid, kind, tickers):
+            mid = st.selectbox(
+                "Lançamento",
+                list(rows_by_id),
+                format_func=describe,
+                key=f"{prefix}_delete_id",
+            )
+
+            confirm = st.checkbox(
+                "Confirmo a exclusão",
+                key=f"{prefix}_delete_confirm_{mid}",
+            )
+
+            if st.button(
+                "Excluir",
+                disabled=not confirm,
+                key=f"{prefix}_delete_button",
+            ):
+                persist(
+                    lambda: store.delete(uid, mid),
+                    "Lançamento excluído.",
+                )
+
+
+def movements_grid(uid, kind, tickers):
+    store = get_store()
+
     st.subheader(f"Editar lançamentos — {kind}")
 
     state_key = f"movements_grid_{uid}_{kind}"
     saved_key = f"movements_saved_{uid}_{kind}"
 
     def load_rows():
-        return [
-            row
-            for row in store.movements(uid)
-            if row["tipo"] == kind
-        ]
+        return [row for row in store.movements(uid) if row["tipo"] == kind]
 
     if state_key not in st.session_state:
         st.session_state[state_key] = {
@@ -182,10 +236,11 @@ def movements_grid(store, uid, kind, tickers):
 
     df = pd.DataFrame(original)[columns].copy()
 
+    df["data"] = pd.to_datetime(df["data"]).dt.date
     df["ordem"] = df["ordem"].astype("Int64")
 
     for column in columns:
-        if column != "ordem":
+        if column not in ("data", "ordem"):
             df[column] = df[column].astype("string")
 
     labels = {
@@ -199,8 +254,10 @@ def movements_grid(store, uid, kind, tickers):
 
     config = {
         "id": None,
-        "data": st.column_config.TextColumn(
-            "Data (AAAA-MM-DD)",
+        "data": st.column_config.DateColumn(
+            "Data",
+            format="DD/MM/YYYY",
+            max_value=date.today(),
             required=True,
         ),
         "ordem": st.column_config.NumberColumn(
@@ -225,10 +282,7 @@ def movements_grid(store, uid, kind, tickers):
 
     edited_df = st.data_editor(
         df,
-        key=(
-            f"movements_editor_{uid}_{kind}_"
-            f"{state['revision']}"
-        ),
+        key=(f"movements_editor_{uid}_{kind}_" f"{state['revision']}"),
         hide_index=True,
         num_rows="fixed",
         disabled=["id"],
@@ -236,10 +290,12 @@ def movements_grid(store, uid, kind, tickers):
     )
 
     visible_rows = (
-        edited_df.astype(object)
-        .where(pd.notna(edited_df), None)
-        .to_dict("records")
+        edited_df.astype(object).where(pd.notna(edited_df), None).to_dict("records")
     )
+    
+    for row in visible_rows:
+        if row["data"] is not None:
+            row["data"] = row["data"].isoformat()
 
     original_by_id = {row["id"]: row for row in original}
 
@@ -254,9 +310,7 @@ def movements_grid(store, uid, kind, tickers):
 
     if edited != original:
         try:
-            store.update_movements_grid(
-                uid, kind, original, edited
-            )
+            store.update_movements_grid(uid, kind, original, edited)
 
         except ValueError as exc:
             st.warning(str(exc))

@@ -7,7 +7,8 @@ from common.common import attempt, get_store
 from screens.first_access_screen import first_access_screen
 from screens.login_screen import login_screen
 from screens.assets_screen import assets_screen
-from screens.movements import movements_ascreen
+from screens.movements import movements_screen
+from screens.quotes_screen import quotes_screen
 
 
 def main():
@@ -38,37 +39,23 @@ def main():
             "Importar e exportar",
         ],
     )
-    assets = store.assets(uid)
-    tickers = [a["ticker"] for a in assets]
-    rows = store.movements(uid)
+    st.session_state.user["assets"] = store.assets(uid)
+    assets = st.session_state.user["assets"]
+    
+    st.session_state.user["tickers"] =  [a["ticker"] for a in assets]
+    tickers =st.session_state.user["tickers"]
+    
+    st.session_state.user["rows"] = store.movements(uid)
+    rows = st.session_state.user["rows"]
 
     if page == "Ativos":
         assets_screen(uid)
 
     elif page == "Lançamentos":
-        movements_ascreen()
+        movements_screen()
 
     elif page == "Cotações":
-        st.subheader("Cotações de fechamento")
-        st.warning(
-            "Use preços históricos sem ajuste por dividendos nem por desdobramentos. Os eventos são registrados separadamente. Séries ajustadas por desdobramentos também distorcem a posição histórica se usadas diretamente."
-        )
-        if tickers:
-            with st.form("quote"):
-                ticker = st.selectbox("Ativo", tickers)
-                day = st.date_input("Data da cotação", max_value=date.today())
-                close = st.text_input("Fechamento em BRL")
-                if st.form_submit_button("Salvar / atualizar cotação"):
-                    attempt(
-                        lambda: store.save_quotes(
-                            uid,
-                            [dict(ticker=ticker, date=day.isoformat(), close=close)],
-                        )
-                    )
-        st.dataframe(store.quotes(uid), hide_index=True)
-        st.caption(
-            "Coleta automática via Yahoo ainda não implementada; importe CSV ou cadastre o preço. Histórico maior nunca é apagado ao consultar períodos menores."
-        )
+        quotes_screen()
 
     elif page == "Importar e exportar":
         st.subheader("Seus dados")
