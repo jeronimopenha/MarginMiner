@@ -2,6 +2,7 @@ from datetime import date
 
 import streamlit as st
 import pandas as pd
+import sqlite3
 
 from common.core import TYPES
 from common.common import attempt, get_store
@@ -9,12 +10,7 @@ from common.constants import allowed
 
 
 def movements_screen():
-    store = get_store()
     uid = st.session_state.user["id"]
-
-    assets = st.session_state.user["assets"]
-    tickers =st.session_state.user["tickers"]
-    rows = st.session_state.user["rows"]
 
     st.subheader("Movimentações")
     st.info(
@@ -32,11 +28,14 @@ def movements_screen():
 
     for kind, tab in zip(TYPES, tabs):
         with tab:
-            movement_tab(store, uid, kind, tickers)
+            movement_tab(kind)
 
 
-def movement_tab(store, uid, kind, tickers):
-    rows = store.movements(uid)
+def movement_tab(kind):
+    store = get_store()
+    uid = st.session_state.user["id"]
+    tickers = [a["ticker"] for a in st.session_state.user["assets"]]
+    movements = st.session_state.user["movements"]
     prefix = f"movement_{uid}_{kind}"
 
     def persist(action, message):
@@ -83,7 +82,7 @@ def movement_tab(store, uid, kind, tickers):
         order = st.number_input(
             "Ordem no dia (não repetir)",
             min_value=1,
-            value=max([r["ordem"] for r in rows] + [0]) + 1,
+            value=max([r["ordem"] for r in movements] + [0]) + 1,
             step=1,
             key=f"{prefix}_ordem",
         )
@@ -139,11 +138,12 @@ def movement_tab(store, uid, kind, tickers):
                 lambda: store.save_movements(uid, [movement]),
                 "Lançamento cadastrado.",
             )
+            st.session_state.user["movements"] = store.movements(uid)
 
-    movements_grid(uid, kind, tickers)
+    movements_grid(kind)
 
     # A exclusão oferece somente os registros desta aba.
-    type_rows = [r for r in rows if r["tipo"] == kind]
+    type_rows = [r for r in movements if r["tipo"] == kind]
 
     if type_rows:
         with st.expander("Excluir lançamento"):
@@ -179,10 +179,13 @@ def movement_tab(store, uid, kind, tickers):
                     lambda: store.delete(uid, mid),
                     "Lançamento excluído.",
                 )
+                st.session_state.user["movements"] = store.movements(uid)
 
 
-def movements_grid(uid, kind, tickers):
+def movements_grid(kind):
     store = get_store()
+    uid = st.session_state.user["id"]
+    tickers = [a["ticker"] for a in st.session_state.user["assets"]]
 
     st.subheader(f"Editar lançamentos — {kind}")
 
@@ -190,7 +193,9 @@ def movements_grid(uid, kind, tickers):
     saved_key = f"movements_saved_{uid}_{kind}"
 
     def load_rows():
-        return [row for row in store.movements(uid) if row["tipo"] == kind]
+        return [
+            row for row in st.session_state.user["movements"] if row["tipo"] == kind
+        ]
 
     if state_key not in st.session_state:
         st.session_state[state_key] = {
@@ -292,7 +297,7 @@ def movements_grid(uid, kind, tickers):
     visible_rows = (
         edited_df.astype(object).where(pd.notna(edited_df), None).to_dict("records")
     )
-    
+
     for row in visible_rows:
         if row["data"] is not None:
             row["data"] = row["data"].isoformat()
@@ -311,6 +316,7 @@ def movements_grid(uid, kind, tickers):
     if edited != original:
         try:
             store.update_movements_grid(uid, kind, original, edited)
+            st.session_state.user["movements"] = store.movements(uid)
 
         except ValueError as exc:
             st.warning(str(exc))

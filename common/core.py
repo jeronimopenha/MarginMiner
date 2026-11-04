@@ -296,10 +296,6 @@ class Store:
             ) from exc
 
     def movements(self, uid):
-        sql_str = "SELECT " + ",".join(
-            FIELDS
-        ) + " FROM movements WHERE user_id=? ORDER BY data,ordem,id", (uid,)
-
         return_ = self.rows(
             "SELECT "
             + ",".join(FIELDS)

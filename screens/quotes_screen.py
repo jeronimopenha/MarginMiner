@@ -13,8 +13,8 @@ def quotes_screen():
     store = get_store()
     uid = st.session_state.user["id"]
 
-    assets = store.assets(uid)
-    movements = store.movements(uid)
+    assets = st.session_state.user["assets"]
+    movements = st.session_state.user["movements"]
 
     st.subheader("Cotações de fechamento")
     st.caption(
@@ -56,7 +56,6 @@ def quotes_screen():
 
                             try:
                                 count, message = fetch_missing_quotes(
-                                    store=store,
                                     uid=uid,
                                     asset=asset,
                                     movements=movements,

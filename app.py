@@ -40,13 +40,9 @@ def main():
         ],
     )
     st.session_state.user["assets"] = store.assets(uid)
-    assets = st.session_state.user["assets"]
     
-    st.session_state.user["tickers"] =  [a["ticker"] for a in assets]
-    tickers =st.session_state.user["tickers"]
-    
-    st.session_state.user["rows"] = store.movements(uid)
-    rows = st.session_state.user["rows"]
+    st.session_state.user["movements"] = store.movements(uid)
+    movements = st.session_state.user["movements"]
 
     if page == "Ativos":
         assets_screen(uid)
@@ -66,7 +62,7 @@ def main():
             "application/json",
         )
         st.download_button(
-            "Exportar lançamentos CSV", csv_bytes(rows), "movimentacoes.csv", "text/csv"
+            "Exportar lançamentos CSV", csv_bytes(movements), "movimentacoes.csv", "text/csv"
         )
         st.download_button(
             "Modelo CSV de lançamentos",
@@ -108,13 +104,13 @@ def main():
         st.caption(
             "BRL · posição comprada · sem alavancagem. Sem cálculo de imposto ou custo médio fiscal."
         )
-        if not rows:
+        if not movements:
             st.info(
                 "Comece cadastrando um ativo e um aporte. Depois registre compras e cotações."
             )
         else:
             try:
-                cash, pos = replay(rows)
+                cash, pos = replay(movements)
                 st.metric("Saldo disponível", f"R$ {cash:,.2f}")
                 st.dataframe(
                     [{"ativo": a, "quantidade": str(q)} for a, q in pos.items() if q],
@@ -126,7 +122,7 @@ def main():
                 st.info(
                     "Convenção: aportes e retiradas no início do dia, emitindo/resgatando cotas pelo valor da cota anterior. Não representa TWR intradiário exato. Dias sem negociação usam o último preço conhecido."
                 )
-                hist = history(rows, store.quotes(uid), end)
+                hist = history(movements, store.quotes(uid), end)
                 if hist:
                     df = pd.DataFrame(hist).set_index("data")
                     st.metric(

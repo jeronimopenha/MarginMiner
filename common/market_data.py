@@ -5,18 +5,22 @@ from datetime import datetime
 
 import pandas as pd
 import yfinance as yf
+import streamlit as st
+
+from common.common import get_store
 
 SUPPORTED_CATEGORIES = {"Ação", "FII", "ETF"}
 
 
 def fetch_missing_quotes(
-    store,
-    uid,
     asset,
     movements,
     saved_quotes,
     review=False,
 ):
+    store = get_store()
+    uid = st.session_state.user["id"]
+    
     ticker = asset["ticker"]
 
     dates = [
